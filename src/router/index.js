@@ -1,12 +1,20 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import GoodsList from '../views/goods_list.vue'
 import GoodsEdit from '../views/goods_edit.vue'
+import StockInbound from '../views/stock_inbound.vue'
+import StockOutbound from '../views/stock_outbound.vue'
+import StockReturn from '../views/stock_return.vue'
+import StockLogs from '../views/stock_logs.vue'
 
 const routes = [
   { path: '/', redirect: '/goods' },
   { path: '/goods', component: GoodsList },
   { path: '/goods/edit', component: GoodsEdit },
-  { path: '/goods/edit/:id', component: GoodsEdit }
+  { path: '/goods/edit/:id', component: GoodsEdit },
+  { path: '/stock/inbound', component: StockInbound },
+  { path: '/stock/outbound', component: StockOutbound },
+  { path: '/stock/return', component: StockReturn },
+  { path: '/stock/logs', component: StockLogs }
 ]
 
 const router = createRouter({

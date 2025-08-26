@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import request from '../api/request'
-import { getStockLogs } from '../api/stock'
+import { getStockLogs, getProductList } from '../api/stock'
 
 const logs = ref([])
 const goodsOptions = ref([])
@@ -10,12 +10,11 @@ const total = ref(0)
 const loading = ref(false)
 
 function loadGoodsOptions() {
-  request.get('/api/product/list').then(res => {
-    const list = []
-    for (const catId in res.products) {
-      list.push(...res.products[catId])
+  getProductList({ page: 1, page_size: 100 }).then(res => {
+    if (res.code === 0) {
+      const list = res.data.list || []
+      goodsOptions.value = list.map(item => ({ label: item.name, value: item.id }))
     }
-    goodsOptions.value = list.map(item => ({ label: item.name, value: item.id }))
   })
 }
 

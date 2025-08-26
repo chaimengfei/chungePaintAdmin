@@ -2,7 +2,7 @@
 import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import request from '../api/request'
-import { returnStock } from '../api/stock'
+import { returnStock, getProductList } from '../api/stock'
 
 const router = useRouter()
 const form = reactive({
@@ -14,12 +14,11 @@ const form = reactive({
 const goodsOptions = ref([])
 
 function loadGoodsOptions() {
-  request.get('/api/product/list').then(res => {
-    const list = []
-    for (const catId in res.products) {
-      list.push(...res.products[catId])
+  getProductList({ page: 1, page_size: 100 }).then(res => {
+    if (res.code === 0) {
+      const list = res.data.list || []
+      goodsOptions.value = list.map(item => ({ label: item.name, value: item.id }))
     }
-    goodsOptions.value = list.map(item => ({ label: item.name, value: item.id }))
   })
 }
 

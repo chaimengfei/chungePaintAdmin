@@ -3,6 +3,7 @@ import { ref, onMounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { getProductList, deleteProduct } from '../api/stock'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { QuestionFilled } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const goods = ref([])
@@ -78,38 +79,53 @@ onMounted(() => {
   <div>
     <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
       <h2>商品列表</h2>
-      <el-button type="primary" @click="addGoods">添加商品</el-button>
+      <el-button type="primary" size="large" style="font-size: 16px; padding: 12px 24px; font-weight: bold;" @click="addGoods">
+        添加商品
+      </el-button>
     </div>
     
     <el-table :data="goods" style="width: 100%" v-loading="loading" border>
-      <el-table-column prop="id" label="ID" width="80" />
-      <el-table-column label="商品图片" width="100">
+      <el-table-column prop="id" label="ID" width="80" sortable />
+      <el-table-column label="名称" min-width="200">
         <template #default="{ row }">
-          <el-image 
-            v-if="row.image" 
-            :src="row.image" 
-            style="width: 60px; height: 60px; object-fit: cover;"
-            :preview-src-list="[row.image]"
-          />
-          <div v-else style="width: 60px; height: 60px; background: #f5f5f5; display: flex; align-items: center; justify-content: center; color: #999;">
-            无图
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <el-image 
+              v-if="row.image" 
+              :src="row.image" 
+              style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;"
+              :preview-src-list="[row.image]"
+            />
+            <div v-else style="width: 50px; height: 50px; background: #f5f5f5; display: flex; align-items: center; justify-content: center; color: #999; border-radius: 4px; font-size: 12px;">
+              无图
+            </div>
+            <span>{{ row.name }}</span>
           </div>
         </template>
       </el-table-column>
-      <el-table-column prop="name" label="商品名称" min-width="150" />
-      <el-table-column prop="specification" label="规格" width="120" />
       <el-table-column prop="unit" label="单位" width="80" />
-      <el-table-column prop="seller_price" label="售价" width="100">
+      <el-table-column prop="specification" label="规格" width="80" />
+      <el-table-column label="售价" width="120">
+        <template #header>
+          <span>售价</span>
+          <el-tooltip content="售价会展示在小程序" placement="top">
+            <el-icon style="margin-left: 4px; cursor: pointer;"><QuestionFilled /></el-icon>
+          </el-tooltip>
+        </template>
         <template #default="{ row }">
-          ¥{{ row.seller_price }}
+          {{ row.seller_price }}
         </template>
       </el-table-column>
-      <el-table-column prop="cost" label="成本" width="100">
+      <el-table-column label="库存" width="120" sortable prop="stock">
+        <template #header>
+          <span>库存</span>
+          <el-tooltip content="入库、出库等均会更新库存" placement="top">
+            <el-icon style="margin-left: 4px; cursor: pointer;"><QuestionFilled /></el-icon>
+          </el-tooltip>
+        </template>
         <template #default="{ row }">
-          ¥{{ row.cost }}
+          <span style="color: #f56c6c;">{{ row.stock }}</span>
         </template>
       </el-table-column>
-      <el-table-column prop="stock" label="库存" width="80" />
       <el-table-column label="状态" width="80">
         <template #default="{ row }">
           <el-tag :type="row.is_on_shelf ? 'success' : 'info'">
@@ -117,6 +133,12 @@ onMounted(() => {
           </el-tag>
         </template>
       </el-table-column>
+      <el-table-column label="进价 (货物成本+运费成本)" width="220" sortable prop="cost">
+        <template #default="{ row }">
+          {{ row.cost }} ({{ row.product_cost }} + {{ row.shipping_cost }})
+        </template>
+      </el-table-column>
+
       <el-table-column label="操作" width="200" fixed="right">
         <template #default="{ row }">
           <el-button size="small" @click="viewGoods(row)">查看</el-button>

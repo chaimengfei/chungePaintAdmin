@@ -5,7 +5,8 @@
         <el-sub-menu index="goods">
           <template #title>商品管理</template>
           <el-menu-item index="/goods">商品列表</el-menu-item>
-          <el-menu-item index="/category">分类管理</el-menu-item>
+          <el-menu-item index="/goods/add">添加商品</el-menu-item>
+          <el-menu-item index="/category">商品分类</el-menu-item>
         </el-sub-menu>
         <el-sub-menu index="stock">
           <template #title>库存管理</template>

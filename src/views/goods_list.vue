@@ -66,7 +66,7 @@ function handlePageChange(page) {
 }
 
 function addGoods() {
-  router.push('/goods/edit')
+  router.push('/goods/add')
 }
 
 onMounted(() => {
@@ -77,7 +77,7 @@ onMounted(() => {
 <template>
   <div>
     <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
-      <h2>商品管理</h2>
+      <h2>商品列表</h2>
       <el-button type="primary" @click="addGoods">添加商品</el-button>
     </div>
     

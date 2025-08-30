@@ -1,18 +1,32 @@
 <template>
   <div>
-    <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
-      <h2>商品分类管理</h2>
-      <el-button type="primary" @click="showAddDialog">添加分类</el-button>
+    <div style="margin-bottom: 20px; display: flex; justify-content: flex-start; align-items: center; gap: 20px;">
+      <h2>商品分类</h2>
+      <div style="margin-left: auto; margin-right: 25%;">
+        <el-button type="primary" size="large" @click="showAddDialog" style="font-size: 18px; padding: 15px 30px;">
+          <el-icon style="margin-right: 10px; font-size: 20px;"><Plus /></el-icon>
+          添加分类
+        </el-button>
+      </div>
     </div>
     
-    <el-table :data="categories" style="width: 100%" v-loading="loading" border>
-      <el-table-column prop="id" label="ID" width="80" />
-      <el-table-column prop="name" label="分类名称" min-width="200" />
-      <el-table-column prop="sort_order" label="排序" width="100" />
+    <el-table :data="categories" style="width: 100%;" v-loading="loading" border>
+      <el-table-column prop="id" label="ID" width="100" />
+      <el-table-column prop="name" label="分类名称" width="180" />
+      <el-table-column prop="sort_order" label="排序" width="120" sortable>
+        <template #header>
+          <span>排序</span>
+          <el-tooltip content="值越大展示越靠前" placement="top">
+            <el-icon style="margin-left: 4px; color: #909399; cursor: pointer;"><QuestionFilled /></el-icon>
+          </el-tooltip>
+        </template>
+      </el-table-column>
       <el-table-column label="操作" width="200" fixed="right">
         <template #default="{ row }">
-          <el-button type="primary" size="small" @click="showEditDialog(row)">编辑</el-button>
-          <el-button type="danger" size="small" @click="handleDelete(row)">删除</el-button>
+          <div style="display: flex; gap: 15px;">
+            <el-button type="primary" size="default" @click="showEditDialog(row)" style="min-width: 70px;">编辑</el-button>
+            <el-button type="danger" size="default" @click="handleDelete(row)" style="min-width: 70px;">删除</el-button>
+          </div>
         </template>
       </el-table-column>
     </el-table>
@@ -45,6 +59,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Plus, QuestionFilled } from '@element-plus/icons-vue'
 import { getCategoryList, addCategory, editCategory, deleteCategory } from '../api/category'
 
 const categories = ref([])

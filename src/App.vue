@@ -2,7 +2,11 @@
   <el-container style="height: 100vh">
     <el-aside width="200px" style="background:#f2f2f2">
       <el-menu router>
-        <el-menu-item index="/goods">商品管理</el-menu-item>
+        <el-sub-menu index="goods">
+          <template #title>商品管理</template>
+          <el-menu-item index="/goods">商品列表</el-menu-item>
+          <el-menu-item index="/category">分类管理</el-menu-item>
+        </el-sub-menu>
         <el-sub-menu index="stock">
           <template #title>库存管理</template>
           <el-menu-item index="/stock/inbound">入库</el-menu-item>

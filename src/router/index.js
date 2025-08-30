@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import GoodsList from '../views/goods_list.vue'
 import GoodsEdit from '../views/goods_edit.vue'
 import GoodsDetail from '../views/goods_detail.vue'
+import CategoryList from '../views/category_list.vue'
 import StockInbound from '../views/stock_inbound.vue'
 import StockOutbound from '../views/stock_outbound.vue'
 import StockReturn from '../views/stock_return.vue'
@@ -13,6 +14,7 @@ const routes = [
   { path: '/goods/edit', component: GoodsEdit },
   { path: '/goods/edit/:id', component: GoodsEdit },
   { path: '/goods/detail', component: GoodsDetail },
+  { path: '/category', component: CategoryList },
   { path: '/stock/inbound', component: StockInbound },
   { path: '/stock/outbound', component: StockOutbound },
   { path: '/stock/return', component: StockReturn },

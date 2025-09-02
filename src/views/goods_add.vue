@@ -6,56 +6,78 @@
     
     <el-card>
       <el-form :model="form" :rules="rules" ref="formRef" label-width="120px" style="max-width: 800px;">
-        <el-form-item label="商品名称" prop="name">
-          <el-input v-model="form.name" placeholder="请输入商品名称" />
-        </el-form-item>
+        <!-- 第一行：名称、单位 -->
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="名称" prop="name">
+              <el-input v-model="form.name" placeholder="请输入名称" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="单位" prop="unit">
+              <el-select v-model="form.unit" placeholder="请选择单位" style="width: 100%;">
+                <el-option label="桶" value="桶" />
+                <el-option label="箱" value="箱" />
+                <el-option label="L" value="L" />
+                <el-option label="卷" value="卷" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
         
-        <el-form-item label="商品分类" prop="category_id">
-          <el-select v-model="form.category_id" placeholder="请选择商品分类" style="width: 100%;">
-            <el-option 
-              v-for="category in categories" 
-              :key="category.id" 
-              :label="category.name" 
-              :value="category.id" 
-            />
-          </el-select>
-        </el-form-item>
+        <!-- 第二行：分类、规格 -->
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="分类" prop="category_id">
+              <el-select v-model="form.category_id" placeholder="请选择分类" style="width: 100%;">
+                <el-option 
+                  v-for="category in categories" 
+                  :key="category.id" 
+                  :label="category.name" 
+                  :value="category.id" 
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="规格" prop="specification">
+              <template #label>
+                <span>规格</span>
+                <el-tooltip content="3KG*4、4L、8L等" placement="top">
+                  <el-icon style="margin-left: 4px; cursor: pointer;"><QuestionFilled /></el-icon>
+                </el-tooltip>
+              </template>
+              <el-input v-model="form.specification" placeholder="可不填" />
+            </el-form-item>
+          </el-col>
+        </el-row>
         
-        <el-form-item label="商品规格" prop="specification">
-          <el-input v-model="form.specification" placeholder="请输入商品规格" />
-        </el-form-item>
+        <!-- 第三行：售价、状态 -->
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="售价" prop="seller_price">
+              <el-input-number 
+                v-model="form.seller_price" 
+                :precision="2" 
+                :min="0" 
+                :step="0.01" 
+                placeholder="请输入售价"
+                style="width: 100%;"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="状态" prop="is_on_shelf">
+              <el-radio-group v-model="form.is_on_shelf">
+                <el-radio :label="1">上架</el-radio>
+                <el-radio :label="0">下架</el-radio>
+              </el-radio-group>
+            </el-form-item>
+          </el-col>
+        </el-row>
         
-        <el-form-item label="商品价格" prop="price">
-          <el-input-number 
-            v-model="form.price" 
-            :precision="2" 
-            :min="0" 
-            :step="0.01" 
-            placeholder="请输入商品价格"
-            style="width: 100%;"
-          />
-        </el-form-item>
-        
-        <el-form-item label="库存数量" prop="stock">
-          <el-input-number 
-            v-model="form.stock" 
-            :min="0" 
-            :step="1" 
-            placeholder="请输入库存数量"
-            style="width: 100%;"
-          />
-        </el-form-item>
-        
-        <el-form-item label="商品描述" prop="description">
-          <el-input 
-            v-model="form.description" 
-            type="textarea" 
-            :rows="4" 
-            placeholder="请输入商品描述"
-          />
-        </el-form-item>
-        
-        <el-form-item label="商品图片" prop="image">
+        <!-- 第四行：图片 -->
+        <el-form-item label="图片" prop="image">
           <el-upload
             class="avatar-uploader"
             :action="uploadUrl"
@@ -65,16 +87,11 @@
             :headers="uploadHeaders"
           >
             <img v-if="form.image" :src="form.image" class="avatar" />
-            <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
+            <div v-else class="avatar-uploader-placeholder">
+              <el-icon class="avatar-uploader-icon"><Plus /></el-icon>
+              <div class="upload-text">请选择本地图片，支持 jpg、png 格式</div>
+            </div>
           </el-upload>
-          <div class="upload-tip">支持 jpg、png 格式，文件大小不超过 2MB</div>
-        </el-form-item>
-        
-        <el-form-item label="商品状态" prop="status">
-          <el-radio-group v-model="form.status">
-            <el-radio :label="1">上架</el-radio>
-            <el-radio :label="0">下架</el-radio>
-          </el-radio-group>
         </el-form-item>
         
         <el-form-item>
@@ -90,7 +107,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, QuestionFilled } from '@element-plus/icons-vue'
 import { getCategoryList } from '../api/category'
 import { addProduct } from '../api/stock'
 
@@ -102,30 +119,36 @@ const formRef = ref()
 const form = reactive({
   name: '',
   category_id: '',
+  unit: '',
   specification: '',
-  price: 0,
-  stock: 0,
-  description: '',
+  seller_price: 0,
+  remark: '',
   image: '',
-  status: 1
+  is_on_shelf: 1
 })
 
 const rules = {
   name: [
-    { required: true, message: '请输入商品名称', trigger: 'blur' },
-    { min: 1, max: 100, message: '商品名称长度在 1 到 100 个字符', trigger: 'blur' }
+    { required: true, message: '请输入名称', trigger: 'blur' },
+    { min: 1, max: 100, message: '名称长度在 1 到 100 个字符', trigger: 'blur' }
   ],
   category_id: [
-    { required: true, message: '请选择商品分类', trigger: 'change' }
+    { required: true, message: '请选择分类', trigger: 'change' }
+  ],
+  unit: [
+    { required: true, message: '请输入单位', trigger: 'blur' }
   ],
   specification: [
-    { required: true, message: '请输入商品规格', trigger: 'blur' }
+    // 规格为可选字段，不需要必填验证
   ],
-  price: [
-    { required: true, message: '请输入商品价格', trigger: 'blur' }
+  seller_price: [
+    { required: true, message: '请输入售价', trigger: 'blur' }
   ],
-  stock: [
-    { required: true, message: '请输入库存数量', trigger: 'blur' }
+  is_on_shelf: [
+    { required: true, message: '请选择状态', trigger: 'change' }
+  ],
+  image: [
+    { required: true, message: '请选择图片', trigger: 'change' }
   ]
 }
 
@@ -232,10 +255,22 @@ onMounted(() => {
 .avatar-uploader-icon {
   font-size: 28px;
   color: #8c939d;
+  margin-bottom: 8px;
+}
+
+.avatar-uploader-placeholder {
   width: 178px;
   height: 178px;
-  text-align: center;
-  line-height: 178px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #8c939d;
+}
+
+.upload-text {
+  font-size: 14px;
+  color: #8c939d;
 }
 
 .upload-tip {

@@ -79,9 +79,11 @@ onMounted(() => {
   <div>
     <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
       <h2>商品列表</h2>
-      <el-button type="primary" size="large" style="font-size: 16px; padding: 12px 24px; font-weight: bold;" @click="addGoods">
-        添加商品
-      </el-button>
+      <div style="margin-right: 100px;">
+        <el-button type="primary" size="large" style="font-size: 27px; padding: 22px 45px; font-weight: bold;" @click="addGoods">
+          添加商品
+        </el-button>
+      </div>
     </div>
     
     <el-table :data="goods" style="width: 100%" v-loading="loading" border>
@@ -139,11 +141,11 @@ onMounted(() => {
         </template>
       </el-table-column>
 
-      <el-table-column label="操作" width="200" fixed="right">
+      <el-table-column label="操作" width="280" fixed="right">
         <template #default="{ row }">
-          <el-button size="small" @click="viewGoods(row)">查看</el-button>
-          <el-button size="small" type="primary" @click="editGoods(row)">编辑</el-button>
-          <el-button size="small" type="danger" @click="deleteGoods(row)">删除</el-button>
+          <el-button size="default" style="padding: 8px 16px; font-size: 14px;" @click="viewGoods(row)">查看</el-button>
+          <el-button size="default" type="primary" style="padding: 8px 16px; font-size: 14px;" @click="editGoods(row)">编辑</el-button>
+          <el-button size="default" type="danger" style="padding: 8px 16px; font-size: 14px;" @click="deleteGoods(row)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>

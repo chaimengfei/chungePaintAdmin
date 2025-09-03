@@ -1,7 +1,7 @@
 <template>
   <div>
     <div style="margin-bottom: 20px;">
-      <h2>添加商品</h2>
+      <h1 style="font-size: 32px; font-weight: bold; color: #303133;">添加商品</h1>
     </div>
     
     <el-card>
@@ -153,7 +153,7 @@ const rules = {
 }
 
 // 上传相关配置
-const uploadUrl = '/api/admin/upload' // 根据实际的上传接口调整
+const uploadUrl = '/admin/product/upload/image' // 根据实际的上传接口调整
 const uploadHeaders = {
   // 如果需要认证token，在这里添加
 }
@@ -163,16 +163,19 @@ function loadCategories() {
   getCategoryList().then(res => {
     if (res.code === 0) {
       categories.value = res.data || []
+    } else {
+      ElMessage.error(res.message || '获取分类列表失败')
     }
-  }).catch(() => {
-    ElMessage.error('获取分类列表失败')
+  }).catch((error) => {
+    console.log('网络错误:', error)
+    ElMessage.error('网络错误，请稍后重试')
   })
 }
 
 // 图片上传成功
 function handleImageSuccess(res) {
   if (res.code === 0) {
-    form.image = res.data.url
+    form.image = res.data
     ElMessage.success('图片上传成功')
   } else {
     ElMessage.error('图片上传失败')
@@ -202,15 +205,18 @@ function handleSubmit() {
     if (valid) {
       submitLoading.value = true
       addProduct(form).then(res => {
+        console.log('API响应:', res) // 添加调试信息
         if (res.code === 0) {
           ElMessage.success('商品添加成功')
           router.push('/goods')
         } else {
+          console.log('错误信息:', res.message) // 添加调试信息
           ElMessage.error(res.message || '商品添加失败')
         }
         submitLoading.value = false
-      }).catch(() => {
-        ElMessage.error('商品添加失败')
+      }).catch((error) => {
+        console.log('网络错误:', error) // 添加调试信息
+        ElMessage.error('网络错误，请稍后重试')
         submitLoading.value = false
       })
     }

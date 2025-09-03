@@ -7,10 +7,9 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': {
-        target: 'http://192.168.99.223:8009', // 你的 Golang 后端地址
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '')
+      '/admin': {
+        target: 'http://192.168.99.152:8009', // 你的 Golang 后端地址
+        changeOrigin: true
       }
     }
   }

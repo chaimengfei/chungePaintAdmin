@@ -1,7 +1,7 @@
 <template>
   <el-container style="height: 100vh">
     <el-aside width="200px" style="background:#f2f2f2">
-      <el-menu router>
+      <el-menu router :default-active="$route.path">
         <el-sub-menu index="goods">
           <template #title>商品管理</template>
           <el-menu-item index="/goods">商品列表</el-menu-item>
@@ -25,4 +25,10 @@
     </el-container>
   </el-container>
 </template>
+
+<script setup>
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+</script>
 

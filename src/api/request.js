@@ -1,12 +1,31 @@
 import axios from 'axios'
 
 const service = axios.create({
-  baseURL: '/api', // 通过vite代理
+  baseURL: '/admin', // 统一添加admin前缀
   timeout: 5000
 })
 service.interceptors.response.use(
   response => response.data,
-  error => Promise.reject(error)
+  error => {
+    // 统一处理 HTTP 错误状态码
+    if (error.response && error.response.data) {
+      const errorData = error.response.data
+      // 如果有业务错误信息，直接返回，让业务代码处理
+      if (errorData.code !== undefined) {
+        return Promise.resolve(errorData)
+      }
+      // 如果没有业务错误码，但有错误信息，包装成统一格式
+      if (errorData.message) {
+        return Promise.resolve({
+          code: -1,
+          message: errorData.message
+        })
+      }
+    }
+    
+    // 网络错误或其他无法处理的错误
+    return Promise.reject(error)
+  }
 )
 
 export default service

@@ -36,4 +36,14 @@ export function updateProduct(id, data) {
 
 export function deleteProduct(id) {
   return request.delete(`/product/del/${id}`)
+}
+
+// 获取出库列表
+export function getOutboundList(params) {
+  return request.get('/stock/outbound/list', { params })
+}
+
+// 获取入库列表
+export function getInboundList(params) {
+  return request.get('/stock/inbound/list', { params })
 } 

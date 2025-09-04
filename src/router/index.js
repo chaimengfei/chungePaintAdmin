@@ -5,7 +5,9 @@ import GoodsDetail from '../views/goods_detail.vue'
 import GoodsAdd from '../views/goods_add.vue'
 import CategoryList from '../views/category_list.vue'
 import StockInbound from '../views/stock_inbound.vue'
+import StockInboundList from '../views/stock_inbound_list.vue'
 import StockOutbound from '../views/stock_outbound.vue'
+import StockOutboundList from '../views/stock_outbound_list.vue'
 import StockReturn from '../views/stock_return.vue'
 import StockLogs from '../views/stock_logs.vue'
 
@@ -17,8 +19,10 @@ const routes = [
   { path: '/goods/edit/:id', component: GoodsEdit },
   { path: '/goods/detail', component: GoodsDetail },
   { path: '/category', component: CategoryList },
-  { path: '/stock/inbound', component: StockInbound },
   { path: '/stock/outbound', component: StockOutbound },
+  { path: '/stock/outbound/list', component: StockOutboundList },
+  { path: '/stock/inbound', component: StockInbound },
+  { path: '/stock/inbound/list', component: StockInboundList },
   { path: '/stock/return', component: StockReturn },
   { path: '/stock/logs', component: StockLogs }
 ]

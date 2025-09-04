@@ -1,6 +1,7 @@
 <script setup>
 import { reactive, ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import request from '../api/request'
 import { batchInboundStock, getProductList } from '../api/stock'
 
@@ -113,7 +114,10 @@ function submitBatchForm() {
   }
   
   batchInboundStock(data).then(() => {
-    router.push('/stock/logs')
+    ElMessage.success('入库成功')
+    router.push('/stock/inbound/list')
+  }).catch(() => {
+    ElMessage.error('入库失败')
   })
 }
 
@@ -124,7 +128,12 @@ onMounted(() => {
 
 <template>
   <div>
-    <el-form label-width="120px" style="max-width: 1000px">
+    <div style="margin-bottom: 20px;">
+      <h1 style="font-size: 32px; font-weight: bold; color: #303133;">商品入库</h1>
+    </div>
+    
+    <el-card>
+      <el-form label-width="120px" style="max-width: 1000px">
       <el-form-item label="操作员姓名">
         <el-input v-model="batchForm.operator" placeholder="请输入操作员姓名" style="width: 300px" />
       </el-form-item>
@@ -168,8 +177,10 @@ onMounted(() => {
         <el-input v-model="batchForm.remark" type="textarea" rows="3" />
       </el-form-item>
       <el-form-item>
-        <el-button type="primary" @click="submitBatchForm">批量入库</el-button>
+        <el-button type="primary" @click="submitBatchForm" size="large">确认入库</el-button>
+        <el-button @click="$router.push('/stock/inbound/list')" size="large">查看入库列表</el-button>
       </el-form-item>
-    </el-form>
+      </el-form>
+    </el-card>
   </div>
 </template> 

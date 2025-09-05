@@ -93,7 +93,7 @@ const totalAmount = computed(() => {
 
 function submitBatchForm() {
   if (!batchForm.operator || !batchForm.operator_id) {
-    alert('请填写操作员信息')
+    alert('请填写操作者信息')
     return
   }
   
@@ -134,11 +134,11 @@ onMounted(() => {
     
     <el-card>
       <el-form label-width="120px" style="max-width: 1000px">
-      <el-form-item label="操作员姓名">
-        <el-input v-model="batchForm.operator" placeholder="请输入操作员姓名" style="width: 300px" />
+      <el-form-item label="操作者姓名">
+        <el-input v-model="batchForm.operator" placeholder="请输入操作者姓名" style="width: 300px" />
       </el-form-item>
-      <el-form-item label="操作员ID">
-        <el-input v-model.number="batchForm.operator_id" type="number" placeholder="请输入操作员ID" style="width: 300px" />
+      <el-form-item label="操作者ID">
+        <el-input v-model.number="batchForm.operator_id" type="number" placeholder="请输入操作者ID" style="width: 300px" />
       </el-form-item>
       <el-form-item label="商品列表">
         <div v-for="(item, index) in batchForm.items" :key="index" style="border: 1px solid #dcdfe6; padding: 16px; margin-bottom: 16px; border-radius: 4px;">

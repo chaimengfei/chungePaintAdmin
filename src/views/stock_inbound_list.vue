@@ -14,7 +14,7 @@
           </template>
         </el-table-column>
         <el-table-column prop="item_count" label="商品数量" width="100" />
-        <el-table-column prop="operator_name" label="操作员" width="120" />
+        <el-table-column prop="operator_name" label="操作者" width="120" />
         <el-table-column prop="created_at" label="入库时间" width="180" />
         <el-table-column prop="remark" label="备注" />
         <el-table-column label="操作" width="120" fixed="right">

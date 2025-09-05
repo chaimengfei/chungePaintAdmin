@@ -106,17 +106,6 @@ onMounted(() => {
       </el-table-column>
       <el-table-column prop="unit" label="单位" width="80" />
       <el-table-column prop="specification" label="规格" width="80" />
-      <el-table-column label="售价" width="120">
-        <template #header>
-          <span>售价</span>
-          <el-tooltip content="售价会展示在小程序" placement="top">
-            <el-icon style="margin-left: 4px; cursor: pointer;"><QuestionFilled /></el-icon>
-          </el-tooltip>
-        </template>
-        <template #default="{ row }">
-          {{ row.seller_price }}
-        </template>
-      </el-table-column>
       <el-table-column label="库存" width="120" sortable prop="stock">
         <template #header>
           <span>库存</span>
@@ -126,6 +115,17 @@ onMounted(() => {
         </template>
         <template #default="{ row }">
           <span style="color: #f56c6c;">{{ row.stock }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="售价" width="120">
+        <template #header>
+          <span>售价</span>
+          <el-tooltip content="售价会展示在小程序" placement="top">
+            <el-icon style="margin-left: 4px; cursor: pointer;"><QuestionFilled /></el-icon>
+          </el-tooltip>
+        </template>
+        <template #default="{ row }">
+          {{ row.seller_price }}
         </template>
       </el-table-column>
       <el-table-column label="状态" width="80">

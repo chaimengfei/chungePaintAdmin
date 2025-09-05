@@ -22,14 +22,15 @@ const batchForm = reactive({
     remark: ''
   }],
   customer: '',
+  operate_time: new Date().toLocaleString('sv-SE').slice(0, 19), // 默认当前本地日期时间
   remark: ''
 })
 
 const goodsOptions = ref([])
 const goodsMap = ref({})
 const customerOptions = ref([
-  { label: '张三', value: '张三' },
-  { label: '李四', value: '李四' }
+  { label: '张三', value: '张三', user_id: 123 },
+  { label: '李四', value: '李四', user_id: 456 }
 ])
 
 function loadGoodsOptions() {
@@ -133,10 +134,17 @@ function submitBatchForm() {
     return
   }
   
+  // 获取选中客户的user_id
+  const selectedCustomer = customerOptions.value.find(customer => customer.value === batchForm.customer)
+  
   const data = {
     items: validItems,
     total_amount: totalAmount.value,
-    customer: batchForm.customer,
+    user_name: batchForm.customer,
+    user_id: selectedCustomer ? selectedCustomer.user_id : null,
+    operate_time: batchForm.operate_time.replace(' ', 'T') + '+08:00', // 保持本地时间，添加时区信息
+    operator: "操作者",
+    operator_id: 1001,
     remark: batchForm.remark
   }
   
@@ -200,7 +208,7 @@ onMounted(() => {
   font-weight: 500;
 }
 
-.el-input,
+.el-input:not([style*="flex"]),
 .el-select {
   width: 100%;
 }
@@ -219,21 +227,38 @@ onMounted(() => {
 <template>
   <div>
     <div style="margin-bottom: 20px;">
-      <h1 style="font-size: 32px; font-weight: bold; color: #303133;">商品出库</h1>
+      <h1 style="font-size: 32px; font-weight: bold; color: #303133;">出库-新增单</h1>
     </div>
     
     <el-card>
       <el-form label-width="120px" style="max-width: 1200px">
-        <el-form-item label="客户" prop="customer">
-          <el-select v-model="batchForm.customer" placeholder="请选择客户" style="width: 300px">
-            <el-option 
-              v-for="customer in customerOptions" 
-              :key="customer.value" 
-              :label="customer.label" 
-              :value="customer.value" 
-            />
-          </el-select>
+        <el-form-item>
+          <div style="display: flex; gap: 20px; align-items: center;">
+            <div style="flex: 1;">
+              <label style="display: block; margin-bottom: 8px; font-size: 14px; color: #606266;">客户</label>
+              <el-select v-model="batchForm.customer" placeholder="请选择客户" style="width: 100%;">
+                <el-option 
+                  v-for="customer in customerOptions" 
+                  :key="customer.value" 
+                  :label="customer.label" 
+                  :value="customer.value" 
+                />
+              </el-select>
+            </div>
+            <div style="flex: 1;">
+              <label style="display: block; margin-bottom: 8px; font-size: 14px; color: #606266;">出库日期</label>
+              <el-date-picker
+                v-model="batchForm.operate_time"
+                type="datetime"
+                placeholder="选择出库日期时间"
+                style="width: 100%;"
+                format="YYYY-MM-DD HH:mm:ss"
+                value-format="YYYY-MM-DD HH:mm:ss"
+              />
+            </div>
+          </div>
         </el-form-item>
+        
         
         <el-form-item label="商品列表">
           <div v-for="(item, index) in batchForm.items" :key="index" class="product-item">
@@ -261,12 +286,8 @@ onMounted(() => {
               </div>
             </div>
             
-            <!-- 第二行：数量、单价、金额 -->
+            <!-- 第二行：单价、数量、金额 -->
             <div class="item-row">
-              <div class="form-group">
-                <label>数量</label>
-                <el-input v-model.number="item.quantity" type="number" min="1" placeholder="请输入数量" @input="calculateItemTotal(item)" />
-              </div>
               <div class="form-group">
                 <label>
                   单价
@@ -284,6 +305,10 @@ onMounted(() => {
                   @focus="onPriceFocus(item)"
                   @blur="onPriceBlur(item)"
                 />
+              </div>
+              <div class="form-group">
+                <label>数量</label>
+                <el-input v-model.number="item.quantity" type="number" min="1" placeholder="请输入数量" @input="calculateItemTotal(item)" />
               </div>
               <div class="form-group">
                 <label>金额</label>
@@ -312,21 +337,20 @@ onMounted(() => {
         
         <el-form-item label="总金额">
           <div style="display: flex; gap: 20px; align-items: center;">
-            <div style="width: 40%;">
-              <el-input v-model="totalAmount" readonly>
+            <div style="flex: 1;">
+              <el-input v-model="totalAmount" readonly style="width: 200px;">
                 <template #prepend>¥</template>
               </el-input>
             </div>
-            <div style="width: 60%;">
-              <label style="display: block; margin-bottom: 8px; font-size: 14px; color: #606266;">其它说明</label>
-              <el-input v-model="batchForm.remark" type="textarea" rows="3" placeholder="整体备注信息" />
+            <div style="flex: 5; display: flex; align-items: center; gap: 12px;">
+              <label style="font-size: 14px; color: #606266; white-space: nowrap;">其它说明</label>
+              <el-input v-model="batchForm.remark" placeholder="整体备注信息" style="flex: 1; width: 100%;" />
             </div>
           </div>
         </el-form-item>
         
         <el-form-item>
-          <el-button type="primary" @click="submitBatchForm" size="large">确认出库</el-button>
-          <el-button @click="$router.push('/stock/outbound/list')" size="large">查看出库列表</el-button>
+          <el-button type="primary" @click="submitBatchForm" size="large" style="font-size: 20px; padding: 15px 40px; font-weight: bold;">确认</el-button>
         </el-form-item>
       </el-form>
     </el-card>

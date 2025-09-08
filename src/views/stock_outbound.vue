@@ -143,7 +143,7 @@ function submitBatchForm() {
     user_name: batchForm.customer,
     user_id: selectedCustomer ? selectedCustomer.user_id : null,
     operate_time: batchForm.operate_time.replace(' ', 'T') + '+08:00', // 保持本地时间，添加时区信息
-    operator: "操作者",
+    operator: "我是操作人",
     operator_id: 1001,
     remark: batchForm.remark
   }
@@ -227,16 +227,15 @@ onMounted(() => {
 <template>
   <div>
     <div style="margin-bottom: 20px;">
-      <h1 style="font-size: 32px; font-weight: bold; color: #303133;">出库-新增单</h1>
+      <h1 style="font-size: 32px; font-weight: bold; color: #303133;">新增出库单</h1>
     </div>
     
     <el-card>
       <el-form label-width="120px" style="max-width: 1200px">
-        <el-form-item>
+        <el-form-item label="请选择客户" style="margin-bottom: 20px;">
           <div style="display: flex; gap: 20px; align-items: center;">
-            <div style="flex: 1;">
-              <label style="display: block; margin-bottom: 8px; font-size: 14px; color: #606266;">客户</label>
-              <el-select v-model="batchForm.customer" placeholder="请选择客户" style="width: 100%;">
+            <div style="flex: 1; display: flex; align-items: center; gap: 12px;">
+              <el-select v-model="batchForm.customer" placeholder="请选择客户" style="flex: 1;">
                 <el-option 
                   v-for="customer in customerOptions" 
                   :key="customer.value" 
@@ -245,13 +244,13 @@ onMounted(() => {
                 />
               </el-select>
             </div>
-            <div style="flex: 1;">
-              <label style="display: block; margin-bottom: 8px; font-size: 14px; color: #606266;">出库日期</label>
+            <div style="flex: 1; display: flex; align-items: center; gap: 12px;">
+              <label style="font-size: 14px; color: #606266; white-space: nowrap;">日期</label>
               <el-date-picker
                 v-model="batchForm.operate_time"
                 type="datetime"
                 placeholder="选择出库日期时间"
-                style="width: 100%;"
+                style="flex: 1;"
                 format="YYYY-MM-DD HH:mm:ss"
                 value-format="YYYY-MM-DD HH:mm:ss"
               />

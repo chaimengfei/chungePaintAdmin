@@ -19,7 +19,7 @@ const routes = [
   { path: '/goods/edit/:id', component: GoodsEdit },
   { path: '/goods/detail', component: GoodsDetail },
   { path: '/category', component: CategoryList },
-  { path: '/stock/outbound', component: StockOutbound, meta: { title: '出库-新增单' } },
+  { path: '/stock/outbound', component: StockOutbound, meta: { title: '出库-新增' } },
   { path: '/stock/outbound/list', component: StockOutboundList, meta: { title: '出库-列表' } },
   { path: '/stock/inbound', component: StockInbound },
   { path: '/stock/inbound/list', component: StockInboundList },

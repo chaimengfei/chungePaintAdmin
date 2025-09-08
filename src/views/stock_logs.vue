@@ -74,7 +74,7 @@ onMounted(() => {
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作者" width="120">
+      <el-table-column label="操作人" width="120">
         <template #default="{ row }">
           {{ getOperatorText(row) }}
         </template>

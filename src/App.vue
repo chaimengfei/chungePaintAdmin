@@ -14,9 +14,9 @@
           <template #title>
             <span style="font-weight: 500;">库存管理</span>
           </template>
-          <el-menu-item index="/stock/inbound">入库</el-menu-item>
+          <el-menu-item index="/stock/inbound">入库-新增</el-menu-item>
           <el-menu-item index="/stock/inbound/list">入库列表</el-menu-item>
-          <el-menu-item index="/stock/outbound">出库-新增单</el-menu-item>
+          <el-menu-item index="/stock/outbound">出库-新增</el-menu-item>
           <el-menu-item index="/stock/outbound/list">出库-列表</el-menu-item>
           <el-menu-item index="/stock/return">退货</el-menu-item>
           <el-menu-item index="/stock/logs">库存日志</el-menu-item>

@@ -21,7 +21,7 @@ const batchForm = reactive({
     specification: '',
     remark: ''
   }],
-  customer: '',
+  customer: null,
   operate_time: new Date().toLocaleString('sv-SE').slice(0, 19), // 默认当前本地日期时间
   remark: ''
 })
@@ -137,8 +137,17 @@ function submitBatchForm() {
   // 获取选中客户的user_id
   const selectedCustomer = customerOptions.value.find(customer => customer.value === batchForm.customer)
   
+  // 转换数据格式，移除页面展示字段
+  const items = validItems.map(item => ({
+    product_id: item.product_id,
+    quantity: item.quantity,
+    unit_price: item.unit_price,
+    total_price: item.total_price,
+    remark: item.remark || ''
+  }))
+  
   const data = {
-    items: validItems,
+    items: items,
     total_amount: totalAmount.value,
     user_name: batchForm.customer,
     user_id: selectedCustomer ? selectedCustomer.user_id : null,
@@ -232,10 +241,10 @@ onMounted(() => {
     
     <el-card>
       <el-form label-width="120px" style="max-width: 1200px">
-        <el-form-item label="请选择客户" style="margin-bottom: 20px;">
+        <el-form-item label="客户" style="margin-bottom: 20px;">
           <div style="display: flex; gap: 20px; align-items: center;">
             <div style="flex: 1; display: flex; align-items: center; gap: 12px;">
-              <el-select v-model="batchForm.customer" placeholder="请选择客户" style="flex: 1;">
+              <el-select v-model="batchForm.customer" placeholder="请选择客户" filterable style="flex: 1;">
                 <el-option 
                   v-for="customer in customerOptions" 
                   :key="customer.value" 
@@ -245,7 +254,7 @@ onMounted(() => {
               </el-select>
             </div>
             <div style="flex: 1; display: flex; align-items: center; gap: 12px;">
-              <label style="font-size: 14px; color: #606266; white-space: nowrap;">日期</label>
+              <label style="font-size: 14px; color: #606266; white-space: nowrap;">出库时间</label>
               <el-date-picker
                 v-model="batchForm.operate_time"
                 type="datetime"

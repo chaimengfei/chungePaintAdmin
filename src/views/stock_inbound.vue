@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { QuestionFilled } from '@element-plus/icons-vue'
 import request from '../api/request'
-import { batchInboundStock, getProductList } from '../api/stock'
+import { batchInboundStock, getProductList, getSupplierList } from '../api/stock'
 
 const router = useRouter()
 
@@ -12,22 +12,23 @@ const router = useRouter()
 const batchForm = reactive({
   items: [{ 
     product_id: '', 
+    cost_per_unit: 0,  // 进价
     quantity: '', 
-    unit_price: 0,
-    default_price: 0,
-    total_price: 0,
+    goods_total_amount: 0,  // 货物总金额
     product_name: '',
     unit: '',
     specification: '',
     remark: ''
   }],
-  operator: '',
+  supplier_id: '',  // 供应商ID
   operate_time: new Date().toLocaleString('sv-SE').slice(0, 19), // 默认当前本地日期时间
   remark: ''
 })
 
 const goodsOptions = ref([])
 const goodsMap = ref({})
+const supplierOptions = ref([])
+const supplierMap = ref({})
 
 function loadGoodsOptions() {
   getProductList({ page: 1, page_size: 100 }).then(res => {
@@ -45,13 +46,28 @@ function loadGoodsOptions() {
   })
 }
 
+function loadSupplierOptions() {
+  getSupplierList().then(res => {
+    if (res.code === 0) {
+      const list = res.data || []
+      supplierOptions.value = list.map(item => ({ 
+        label: item.name, 
+        value: item.id 
+      }))
+      supplierMap.value = {}
+      list.forEach(item => {
+        supplierMap.value[item.id] = item
+      })
+    }
+  })
+}
+
 function addBatchItem() {
   batchForm.items.push({ 
     product_id: '', 
+    cost_per_unit: 0,  // 进价
     quantity: '', 
-    unit_price: 0,
-    default_price: 0,
-    total_price: 0,
+    goods_total_amount: 0,  // 货物总金额
     product_name: '',
     unit: '',
     specification: '',
@@ -74,10 +90,9 @@ function onProductChange(item, productId) {
         item.product_name = product.name
         item.unit = product.unit || '个'
         item.specification = product.specification || ''
-        item.default_price = product.cost_price || 0
-        // 不自动填充单价，让用户手动输入
-        item.unit_price = 0
-        item.total_price = 0
+        // 清空金额字段，等待用户输入进价和数量后自动计算
+        item.goods_total_amount = 0
+        // 进价现在由用户手动输入，不清空
       }
     }).catch(() => {
       ElMessage.error('获取商品信息失败')
@@ -86,57 +101,69 @@ function onProductChange(item, productId) {
     item.product_name = ''
     item.unit = ''
     item.specification = ''
-    item.unit_price = 0
-    item.default_price = 0
-    item.total_price = 0
+    item.goods_total_amount = 0
+    // 进价现在由用户手动输入，不清空
   }
 }
 
-function calculateItemTotal(item) {
-  if (item.quantity && item.unit_price) {
-    item.total_price = item.quantity * item.unit_price
+// 计算成本相关字段
+function calculateCosts(item) {
+  if (item.cost_per_unit && item.quantity && item.quantity > 0) {
+    // 计算金额 = 进价 × 数量
+    item.goods_total_amount = item.cost_per_unit * item.quantity
+  } else {
+    item.goods_total_amount = 0
   }
 }
 
-// 单价输入框获得焦点时，清空默认价格提示
-function onPriceFocus(item) {
-  if (item.unit_price === 0 && item.default_price > 0) {
-    item.unit_price = ''
-  }
-}
-
-// 单价输入框失去焦点时，如果为空则恢复默认价格提示
-function onPriceBlur(item) {
-  if (!item.unit_price && item.default_price > 0) {
-    item.unit_price = 0
-  }
-}
-
-const totalAmount = computed(() => {
-  return batchForm.items.reduce((sum, item) => sum + (item.total_price || 0), 0)
+// 计算总金额
+const totalSpent = computed(() => {
+  return batchForm.items.reduce((sum, item) => sum + (item.goods_total_amount || 0), 0)
 })
 
+
 function submitBatchForm() {
-  if (!batchForm.operator) {
-    ElMessage.error('请填写操作者信息')
-    return
-  }
-  
   const validItems = batchForm.items.filter(item => 
-    item.product_id && item.quantity && item.unit_price && item.quantity > 0
+    item.product_id && item.quantity && item.goods_total_amount && item.quantity > 0
   )
   if (validItems.length === 0) {
     ElMessage.error('请至少添加一个商品并填写完整信息')
     return
   }
   
+  if (!batchForm.supplier_id) {
+    ElMessage.error('请选择供货商')
+    return
+  }
+  
+  // 为每个商品计算成本
+  validItems.forEach(item => {
+    calculateCosts(item)
+  })
+  
+  // 获取供货商名称
+  const supplier = supplierMap.value[batchForm.supplier_id]
+  if (!supplier) {
+    ElMessage.error('供货商信息获取失败')
+    return
+  }
+  
+  // 转换数据格式以匹配新接口
+  const items = validItems.map(item => ({
+    product_id: item.product_id,
+    quantity: item.quantity,
+    product_cost: item.cost_per_unit,
+    total_price: item.goods_total_amount,
+    remark: item.remark || ''
+  }))
+  
   const data = {
-    items: validItems,
-    total_amount: totalAmount.value,
-    operator: batchForm.operator,
+    items: items,
+    total_amount: totalSpent.value,
+    operator: "张三",
     operator_id: 1001,
-    operate_time: batchForm.operate_time.replace(' ', 'T') + '+08:00', // 保持本地时间，添加时区信息
-    remark: batchForm.remark
+    supplier: supplier.name,
+    remark: batchForm.remark || ''
   }
   
   batchInboundStock(data).then(() => {
@@ -149,6 +176,7 @@ function submitBatchForm() {
 
 onMounted(() => {
   loadGoodsOptions()
+  loadSupplierOptions()
 })
 </script>
 
@@ -221,13 +249,20 @@ onMounted(() => {
     
     <el-card>
       <el-form label-width="120px" style="max-width: 1200px">
-        <el-form-item label="操作者" style="margin-bottom: 20px;">
+        <el-form-item label="供货商" style="margin-bottom: 20px;">
           <div style="display: flex; gap: 20px; align-items: center;">
             <div style="flex: 1; display: flex; align-items: center; gap: 12px;">
-              <el-input v-model="batchForm.operator" placeholder="请输入操作者姓名" style="flex: 1;" />
+              <el-select
+                v-model="batchForm.supplier_id"
+                placeholder="选择供货商"
+                filterable
+                style="flex: 1;"
+              >
+                <el-option v-for="opt in supplierOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+              </el-select>
             </div>
             <div style="flex: 1; display: flex; align-items: center; gap: 12px;">
-              <label style="font-size: 14px; color: #606266; white-space: nowrap;">日期</label>
+              <label style="font-size: 14px; color: #606266; white-space: nowrap; min-width: 80px;">入库时间</label>
               <el-date-picker
                 v-model="batchForm.operate_time"
                 type="datetime"
@@ -267,33 +302,19 @@ onMounted(() => {
               </div>
             </div>
             
-            <!-- 第二行：单价、数量、金额 -->
+            <!-- 第二行：进价、数量、金额 -->
             <div class="item-row">
               <div class="form-group">
-                <label>
-                  单价
-                  <el-tooltip content="可以使用默认的金额，也可以手动填充" placement="top">
-                    <el-icon style="margin-left: 4px; cursor: pointer; color: #909399;"><QuestionFilled /></el-icon>
-                  </el-tooltip>
-                </label>
-                <el-input 
-                  v-model.number="item.unit_price" 
-                  type="number" 
-                  min="0" 
-                  step="0.01" 
-                  :placeholder="item.default_price ? `默认: ¥${item.default_price}` : '单价'"
-                  @input="calculateItemTotal(item)"
-                  @focus="onPriceFocus(item)"
-                  @blur="onPriceBlur(item)"
-                />
+                <label>进价</label>
+                <el-input v-model.number="item.cost_per_unit" type="number" min="0" step="0.01" placeholder="请输入进价" @input="calculateCosts(item)" />
               </div>
               <div class="form-group">
                 <label>数量</label>
-                <el-input v-model.number="item.quantity" type="number" min="1" placeholder="请输入数量" @input="calculateItemTotal(item)" />
+                <el-input v-model.number="item.quantity" type="number" min="1" placeholder="请输入数量" @input="calculateCosts(item)" />
               </div>
               <div class="form-group">
                 <label>金额</label>
-                <el-input v-model.number="item.total_price" type="number" min="0" step="0.01" placeholder="金额" readonly />
+                <el-input v-model.number="item.goods_total_amount" type="number" min="0" step="0.01" placeholder="自动计算" readonly />
               </div>
             </div>
             
@@ -319,7 +340,7 @@ onMounted(() => {
         <el-form-item label="总金额">
           <div style="display: flex; gap: 20px; align-items: center;">
             <div style="flex: 1;">
-              <el-input v-model="totalAmount" readonly style="width: 200px;">
+              <el-input v-model="totalSpent" readonly style="width: 200px;">
                 <template #prepend>¥</template>
               </el-input>
             </div>

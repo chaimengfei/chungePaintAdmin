@@ -46,4 +46,9 @@ export function getOutboundList(params) {
 // 获取入库列表
 export function getInboundList(params) {
   return request.get('/stock/inbound/list', { params })
+}
+
+// 获取供应商列表
+export function getSupplierList() {
+  return request.get('/stock/suppliers')
 } 

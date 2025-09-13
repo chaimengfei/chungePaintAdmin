@@ -15,6 +15,11 @@
             </el-tag>
           </template>
         </el-table-column>
+        <el-table-column prop="total_quantity" label="总数量" width="100">
+          <template #default="scope">
+            <span style="color: #67c23a;">{{ scope.row.total_quantity || 0 }}</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="total_amount" label="总金额" width="120">
           <template #default="scope">
             ¥{{ scope.row.total_amount?.toFixed(2) || '0.00' }}
@@ -197,6 +202,7 @@ function viewDetail(row) {
         <div><strong>客户：</strong>${row.user_name || '无'}</div>
         <div><strong>操作人：</strong>${row.operator || '无'}</div>
         <div><strong>出库时间：</strong>${formatDateTime(row.created_at)}</div>
+        <div><strong>总数量：</strong><span style="color: #67c23a;">${row.total_quantity || 0}</span></div>
         <div><strong>总金额：</strong>¥${row.total_amount?.toFixed(2) || '0.00'}</div>
         <div><strong>总利润：</strong><span style="color: ${row.total_profit >= 0 ? '#67c23a' : '#f56c6c'}">¥${row.total_profit?.toFixed(2) || '0.00'}</span></div>
         <div><strong>支付状态：</strong>${row.payment_finish_status === 3 ? '支付完成' : '未支付'}${row.payment_finish_status === 3 && row.payment_finish_time ? ` (${formatDateTime(row.payment_finish_time)})` : ''}</div>

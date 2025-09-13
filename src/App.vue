@@ -19,7 +19,6 @@
           <el-menu-item index="/stock/outbound">出库-新增</el-menu-item>
           <el-menu-item index="/stock/outbound/list">出库-列表</el-menu-item>
           <el-menu-item index="/stock/return">退货</el-menu-item>
-          <el-menu-item index="/stock/logs">库存日志</el-menu-item>
         </el-sub-menu>
       </el-menu>
     </el-aside>

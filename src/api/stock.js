@@ -13,9 +13,6 @@ export function returnStock(data) {
   return request.post('/stock/return', data)
 }
 
-export function getStockLogs(params) {
-  return request.get('/stock/operations', { params })
-}
 
 // 商品管理
 export function getProductList(params) {

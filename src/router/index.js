@@ -9,7 +9,6 @@ import StockInboundList from '../views/stock_inbound_list.vue'
 import StockOutbound from '../views/stock_outbound.vue'
 import StockOutboundList from '../views/stock_outbound_list.vue'
 import StockReturn from '../views/stock_return.vue'
-import StockLogs from '../views/stock_logs.vue'
 
 const routes = [
   { path: '/', redirect: '/goods' },
@@ -24,7 +23,6 @@ const routes = [
   { path: '/stock/inbound', component: StockInbound },
   { path: '/stock/inbound/list', component: StockInboundList },
   { path: '/stock/return', component: StockReturn },
-  { path: '/stock/logs', component: StockLogs }
 ]
 
 const router = createRouter({

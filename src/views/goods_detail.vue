@@ -8,6 +8,7 @@ const route = useRoute()
 const router = useRouter()
 const loading = ref(false)
 const product = ref({})
+const shopInfo = ref({})
 
 onMounted(() => {
   const id = route.query.id
@@ -23,7 +24,8 @@ function loadProductDetail(id) {
   loading.value = true
   getProductDetail(id).then(res => {
     if (res.code === 0) {
-      product.value = res.data
+      product.value = res.data.product || res.data
+      shopInfo.value = res.data.shop_info || {}
     } else {
       ElMessage.error('获取商品详情失败')
       router.push('/goods')
@@ -76,6 +78,10 @@ function editProduct() {
             <el-descriptions title="基本信息" :column="1" border>
               <el-descriptions-item label="商品ID">{{ product.id }}</el-descriptions-item>
               <el-descriptions-item label="商品名称">{{ product.name }}</el-descriptions-item>
+              <el-descriptions-item label="所属店铺">
+                <el-tag v-if="shopInfo.name" type="primary">{{ shopInfo.name }}</el-tag>
+                <span v-else style="color: #909399;">暂无店铺信息</span>
+              </el-descriptions-item>
               <el-descriptions-item label="商品分类">
                 <el-tag v-if="product.category_id === 1">油漆类</el-tag>
                 <el-tag v-else-if="product.category_id === 2" type="success">工具类</el-tag>

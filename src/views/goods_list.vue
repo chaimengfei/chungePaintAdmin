@@ -11,8 +11,49 @@ const loading = ref(false)
 const total = ref(0)
 const query = reactive({
   page: 1,
-  page_size: 10
+  page_size: 10,
+  shop_id: null,
+  name: '' // 商品名称搜索
 })
+
+// 用户权限相关
+const isRoot = ref(false)
+const shopInfo = ref(null)
+const shopList = ref([])
+const selectedShopId = ref(null)
+
+// 筛选相关
+const showFilters = ref(false)
+
+// 加载用户权限信息
+function loadUserInfo() {
+  const shop = localStorage.getItem('shop_info')
+  const shops = localStorage.getItem('shop_list')
+  
+  // 判断是否为root用户
+  isRoot.value = !shop || shop === 'null'
+  
+  if (shop && shop !== 'null') {
+    try {
+      shopInfo.value = JSON.parse(shop)
+      query.shop_id = shopInfo.value.id
+    } catch (error) {
+      console.error('解析店铺信息失败:', error)
+    }
+  }
+  
+  if (shops && shops !== 'null') {
+    try {
+      shopList.value = JSON.parse(shops)
+      if (isRoot.value && shopList.value.length > 0) {
+        selectedShopId.value = shopList.value[0].id
+        query.shop_id = selectedShopId.value
+      }
+    } catch (error) {
+      console.error('解析店铺列表失败:', error)
+    }
+  }
+}
 
 function loadGoods() {
   loading.value = true
@@ -28,6 +69,44 @@ function loadGoods() {
     loading.value = false
     ElMessage.error('获取商品列表失败')
   })
+}
+
+// 处理店铺切换
+function handleShopChange(shopId) {
+  selectedShopId.value = shopId
+  query.shop_id = shopId
+  query.page = 1 // 重置到第一页
+  loadGoods()
+}
+
+
+// 搜索商品
+function searchGoods() {
+  query.page = 1
+  loadGoods()
+}
+
+// 重置筛选
+function resetFilters() {
+  query.name = ''
+  query.page = 1
+  loadGoods()
+}
+
+// 切换筛选面板显示
+function toggleFilters() {
+  showFilters.value = !showFilters.value
+}
+
+// 获取当前店铺名称
+function getCurrentShopName() {
+  if (isRoot.value && selectedShopId.value) {
+    const selectedShop = shopList.value.find(shop => shop.id === selectedShopId.value)
+    return selectedShop ? selectedShop.name : '请选择店铺'
+  } else if (!isRoot.value && shopInfo.value) {
+    return shopInfo.value.name
+  }
+  return '未知店铺'
 }
 
 function editGoods(row) {
@@ -71,7 +150,15 @@ function addGoods() {
 }
 
 onMounted(() => {
+  loadUserInfo()
   loadGoods()
+  
+  // 监听全局店铺切换事件
+  window.addEventListener('shopChanged', (event) => {
+    if (isRoot.value) {
+      handleShopChange(event.detail.shopId)
+    }
+  })
 })
 </script>
 
@@ -79,12 +166,62 @@ onMounted(() => {
   <div>
     <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
       <h2>商品列表</h2>
-      <div style="margin-right: 100px;">
+      <div style="display: flex; align-items: center; gap: 16px;">
         <el-button type="primary" size="large" style="font-size: 27px; padding: 22px 45px; font-weight: bold;" @click="addGoods">
           添加商品
         </el-button>
       </div>
     </div>
+    
+    <!-- 筛选面板 -->
+    <el-card style="margin-bottom: 20px;">
+      <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+        <!-- 店铺筛选 -->
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="color: #606266; white-space: nowrap;">店铺：</span>
+          <!-- Root用户显示店铺选择器 -->
+          <el-select
+            v-if="isRoot && shopList.length > 0"
+            v-model="selectedShopId"
+            placeholder="请选择店铺"
+            style="width: 150px;"
+            @change="handleShopChange"
+          >
+            <el-option
+              v-for="shop in shopList"
+              :key="shop.id"
+              :label="shop.name"
+              :value="shop.id"
+            />
+          </el-select>
+          <!-- 普通管理员显示固定店铺 -->
+          <el-input
+            v-else
+            :value="getCurrentShopName()"
+            disabled
+            style="width: 150px;"
+          />
+        </div>
+        
+        <!-- 商品名称搜索 -->
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="color: #606266; white-space: nowrap;">名称：</span>
+          <el-input
+            v-model="query.name"
+            placeholder="请输入商品名称"
+            style="width: 200px;"
+            clearable
+            @keyup.enter="searchGoods"
+          />
+        </div>
+        
+        <!-- 操作按钮 -->
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <el-button type="primary" @click="searchGoods">搜索</el-button>
+          <el-button @click="resetFilters">重置</el-button>
+        </div>
+      </div>
+    </el-card>
     
     <el-table :data="goods" style="width: 100%" v-loading="loading" border>
       <el-table-column prop="id" label="ID" width="80" sortable />

@@ -6,7 +6,37 @@
     
     <el-card>
       <el-form :model="form" :rules="rules" ref="formRef" label-width="120px" style="max-width: 800px;">
-        <!-- 第一行：名称、单位 -->
+        <!-- 第一行：店铺选择 -->
+        <el-row :gutter="20">
+          <el-col :span="24">
+            <el-form-item label="所属店铺" prop="shop_id">
+              <!-- 普通管理员显示固定店铺 -->
+              <el-input 
+                v-if="!isRoot && shopInfo" 
+                :value="shopInfo.name" 
+                disabled 
+                style="width: 100%;"
+              />
+              <!-- Root用户显示店铺选择器 -->
+              <el-select 
+                v-else-if="isRoot && shopList.length > 0"
+                v-model="form.shop_id" 
+                placeholder="请选择店铺" 
+                style="width: 100%;"
+              >
+                <el-option
+                  v-for="shop in shopList"
+                  :key="shop.id"
+                  :label="shop.name"
+                  :value="shop.id"
+                />
+              </el-select>
+              <span v-else style="color: #909399;">暂无店铺信息</span>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        
+        <!-- 第二行：名称、单位 -->
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="名称" prop="name">
@@ -116,6 +146,11 @@ const categories = ref([])
 const submitLoading = ref(false)
 const formRef = ref()
 
+// 用户权限相关
+const isRoot = ref(false)
+const shopInfo = ref(null)
+const shopList = ref([])
+
 const form = reactive({
   name: '',
   category_id: '',
@@ -124,7 +159,8 @@ const form = reactive({
   seller_price: 0,
   remark: '',
   image: '',
-  is_on_shelf: 1
+  is_on_shelf: 1,
+  shop_id: null
 })
 
 const rules = {
@@ -228,7 +264,37 @@ function handleCancel() {
   router.push('/goods')
 }
 
+// 加载用户权限信息
+function loadUserInfo() {
+  const shop = localStorage.getItem('shop_info')
+  const shops = localStorage.getItem('shop_list')
+  
+  // 判断是否为root用户
+  isRoot.value = !shop || shop === 'null'
+  
+  if (shop && shop !== 'null') {
+    try {
+      shopInfo.value = JSON.parse(shop)
+      form.shop_id = shopInfo.value.id
+    } catch (error) {
+      console.error('解析店铺信息失败:', error)
+    }
+  }
+  
+  if (shops && shops !== 'null') {
+    try {
+      shopList.value = JSON.parse(shops)
+      if (isRoot.value && shopList.value.length > 0) {
+        form.shop_id = shopList.value[0].id
+      }
+    } catch (error) {
+      console.error('解析店铺列表失败:', error)
+    }
+  }
+}
+
 onMounted(() => {
+  loadUserInfo()
   loadCategories()
 })
 </script>

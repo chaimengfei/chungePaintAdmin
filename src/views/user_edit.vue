@@ -29,6 +29,32 @@
           />
         </el-form-item>
         
+        <el-form-item label="所属店铺" prop="shop_id">
+          <!-- 普通管理员显示固定店铺 -->
+          <el-input 
+            v-if="!isRoot && shopInfo" 
+            :value="shopInfo.name" 
+            disabled 
+            style="width: 100%;"
+          />
+          <!-- Root用户显示店铺选择器 -->
+          <el-select 
+            v-else-if="isRoot && shopList.length > 0"
+            v-model="userForm.shop_id" 
+            placeholder="请选择店铺" 
+            style="width: 100%;"
+            @change="handleShopChange"
+          >
+            <el-option
+              v-for="shop in shopList"
+              :key="shop.id"
+              :label="shop.name"
+              :value="shop.id"
+            />
+          </el-select>
+          <span v-else style="color: #909399;">暂无店铺信息</span>
+        </el-form-item>
+        
         <el-form-item label="状态" prop="is_enable">
           <el-radio-group v-model="userForm.is_enable">
             <el-radio :label="1">正常</el-radio>
@@ -71,12 +97,63 @@ const userFormRef = ref()
 const submitting = ref(false)
 const loading = ref(false)
 
+// 用户权限相关
+const isRoot = ref(false)
+const shopInfo = ref(null)
+const shopList = ref([])
+const selectedShopId = ref(null)
+
+// 加载用户权限信息
+function loadUserInfo() {
+  const shop = localStorage.getItem('shop_info')
+  const shops = localStorage.getItem('shop_list')
+  
+  // 判断是否为root用户
+  isRoot.value = !shop || shop === 'null'
+  
+  if (shop && shop !== 'null') {
+    try {
+      shopInfo.value = JSON.parse(shop)
+    } catch (error) {
+      console.error('解析店铺信息失败:', error)
+    }
+  }
+  
+  if (shops && shops !== 'null') {
+    try {
+      shopList.value = JSON.parse(shops)
+      if (isRoot.value && shopList.value.length > 0) {
+        selectedShopId.value = shopList.value[0].id
+      }
+    } catch (error) {
+      console.error('解析店铺列表失败:', error)
+    }
+  }
+}
+
+// 获取当前店铺名称
+function getCurrentShopName() {
+  if (isRoot.value && selectedShopId.value) {
+    const selectedShop = shopList.value.find(shop => shop.id === selectedShopId.value)
+    return selectedShop ? selectedShop.name : '请选择店铺'
+  } else if (!isRoot.value && shopInfo.value) {
+    return shopInfo.value.name
+  }
+  return '未知店铺'
+}
+
+// 处理店铺切换
+function handleShopChange(shopId) {
+  selectedShopId.value = shopId
+  userForm.shop_id = shopId
+}
+
 // 表单数据
 const userForm = reactive({
   id: null,
   admin_display_name: '',
   mobile_phone: '',
-  shop_id: 1, // 默认燕郊店
+  shop_id: null, // 店铺ID，由权限控制设置
   is_enable: 1,
   remark: ''
 })
@@ -112,9 +189,14 @@ function loadUserDetail() {
       userForm.id = user.id
       userForm.admin_display_name = user.admin_display_name || ''
       userForm.mobile_phone = user.mobile_phone || ''
-      userForm.shop_id = user.shop_id || 1
+      userForm.shop_id = user.shop_id || null
       userForm.is_enable = user.is_enable
       userForm.remark = user.remark || ''
+      
+      // 如果是root用户，设置选中的店铺ID
+      if (isRoot.value && user.shop_id) {
+        selectedShopId.value = user.shop_id
+      }
     } else {
       ElMessage.error(res.message || '获取用户详情失败')
       router.push('/user/list')
@@ -171,7 +253,15 @@ function goBack() {
 }
 
 onMounted(() => {
+  loadUserInfo()
   loadUserDetail()
+  
+  // 监听全局店铺切换事件
+  window.addEventListener('shopChanged', (event) => {
+    if (isRoot.value) {
+      handleShopChange(event.detail.shopId)
+    }
+  })
 })
 </script>
 

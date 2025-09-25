@@ -4,6 +4,38 @@
       <h1 style="font-size: 32px; font-weight: bold; color: #303133;">入库-列表</h1>
     </div>
     
+    <!-- 筛选面板 -->
+    <el-card style="margin-bottom: 20px;">
+      <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+        <!-- 店铺筛选 -->
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="color: #606266; white-space: nowrap;">店铺：</span>
+          <!-- Root用户显示店铺选择器 -->
+          <el-select
+            v-if="isRoot && shopList.length > 0"
+            v-model="selectedShopId"
+            placeholder="请选择店铺"
+            style="width: 150px;"
+            @change="handleShopChange"
+          >
+            <el-option
+              v-for="shop in shopList"
+              :key="shop.id"
+              :label="shop.name"
+              :value="shop.id"
+            />
+          </el-select>
+          <!-- 普通管理员显示固定店铺 -->
+          <el-input
+            v-else
+            :value="getCurrentShopName()"
+            disabled
+            style="width: 150px;"
+          />
+        </div>
+      </div>
+    </el-card>
+    
     <el-card>
       <el-table :data="inboundList" style="width: 100%" v-loading="loading" border>
         <el-table-column prop="operation_no" label="入库单号" width="200" />
@@ -78,16 +110,77 @@ const currentPage = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
 
+// 用户权限相关
+const isRoot = ref(false)
+const shopInfo = ref(null)
+const shopList = ref([])
+const selectedShopId = ref(null)
+
+// 加载用户权限信息
+function loadUserInfo() {
+  const shop = localStorage.getItem('shop_info')
+  const shops = localStorage.getItem('shop_list')
+  
+  // 判断是否为root用户
+  isRoot.value = !shop || shop === 'null'
+  
+  if (shop && shop !== 'null') {
+    try {
+      shopInfo.value = JSON.parse(shop)
+    } catch (error) {
+      console.error('解析店铺信息失败:', error)
+    }
+  }
+  
+  if (shops && shops !== 'null') {
+    try {
+      shopList.value = JSON.parse(shops)
+      if (isRoot.value && shopList.value.length > 0) {
+        selectedShopId.value = shopList.value[0].id
+      }
+    } catch (error) {
+      console.error('解析店铺列表失败:', error)
+    }
+  }
+}
+
+// 获取当前店铺名称
+function getCurrentShopName() {
+  if (isRoot.value && selectedShopId.value) {
+    const selectedShop = shopList.value.find(shop => shop.id === selectedShopId.value)
+    return selectedShop ? selectedShop.name : '请选择店铺'
+  } else if (!isRoot.value && shopInfo.value) {
+    return shopInfo.value.name
+  }
+  return '未知店铺'
+}
+
+// 处理店铺切换
+function handleShopChange(shopId) {
+  selectedShopId.value = shopId
+  currentPage.value = 1 // 重置到第一页
+  loadInboundList()
+}
+
 // 加载入库列表
 function loadInboundList() {
   loading.value = true
-  request.get('/stock/operations', {
-    params: {
-      types: 1,
-      page: currentPage.value,
-      page_size: pageSize.value
-    }
-  }).then(res => {
+  
+  // 构建请求参数
+  const params = {
+    types: 1,
+    page: currentPage.value,
+    page_size: pageSize.value
+  }
+  
+  // 添加店铺ID参数
+  if (isRoot.value && selectedShopId.value) {
+    params.shop_id = selectedShopId.value
+  } else if (!isRoot.value && shopInfo.value) {
+    params.shop_id = shopInfo.value.id
+  }
+  
+  request.get('/stock/operations', { params }).then(res => {
     if (res.code === 0) {
       inboundList.value = res.data.list || []
       total.value = res.data.total || 0
@@ -176,7 +269,15 @@ function handleCurrentChange(val) {
 }
 
 onMounted(() => {
+  loadUserInfo()
   loadInboundList()
+  
+  // 监听全局店铺切换事件
+  window.addEventListener('shopChanged', (event) => {
+    if (isRoot.value) {
+      handleShopChange(event.detail.shopId)
+    }
+  })
 })
 </script>
 

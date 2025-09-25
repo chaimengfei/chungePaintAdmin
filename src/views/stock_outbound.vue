@@ -23,7 +23,8 @@ const batchForm = reactive({
   }],
   customer: null,
   operate_time: new Date().toLocaleString('sv-SE').slice(0, 19), // 默认当前本地日期时间
-  remark: ''
+  remark: '',
+  shop_id: null  // 店铺ID
 })
 
 const goodsOptions = ref([])
@@ -32,6 +33,12 @@ const customerOptions = ref([
   { label: '张三', value: '张三', user_id: 123 },
   { label: '李四', value: '李四', user_id: 456 }
 ])
+
+// 用户权限相关
+const isRoot = ref(false)
+const shopInfo = ref(null)
+const shopList = ref([])
+const selectedShopId = ref(null)
 
 function loadGoodsOptions() {
   getProductList({ page: 1, page_size: 100 }).then(res => {
@@ -47,6 +54,57 @@ function loadGoodsOptions() {
       })
     }
   })
+}
+
+// 加载用户权限信息
+function loadUserInfo() {
+  const shop = localStorage.getItem('shop_info')
+  const shops = localStorage.getItem('shop_list')
+  
+  // 判断是否为root用户
+  isRoot.value = !shop || shop === 'null'
+  
+  if (shop && shop !== 'null') {
+    try {
+      shopInfo.value = JSON.parse(shop)
+      // 普通管理员设置默认店铺ID
+      if (!isRoot.value) {
+        batchForm.shop_id = shopInfo.value.id
+      }
+    } catch (error) {
+      console.error('解析店铺信息失败:', error)
+    }
+  }
+  
+  if (shops && shops !== 'null') {
+    try {
+      shopList.value = JSON.parse(shops)
+      if (isRoot.value && shopList.value.length > 0) {
+        selectedShopId.value = shopList.value[0].id
+        // Root用户设置默认店铺ID
+        batchForm.shop_id = shopList.value[0].id
+      }
+    } catch (error) {
+      console.error('解析店铺列表失败:', error)
+    }
+  }
+}
+
+// 获取当前店铺名称
+function getCurrentShopName() {
+  if (isRoot.value && selectedShopId.value) {
+    const selectedShop = shopList.value.find(shop => shop.id === selectedShopId.value)
+    return selectedShop ? selectedShop.name : '请选择店铺'
+  } else if (!isRoot.value && shopInfo.value) {
+    return shopInfo.value.name
+  }
+  return '未知店铺'
+}
+
+// 处理店铺切换
+function handleShopChange(shopId) {
+  selectedShopId.value = shopId
+  batchForm.shop_id = shopId
 }
 
 function addBatchItem() {
@@ -154,7 +212,8 @@ function submitBatchForm() {
     operate_time: batchForm.operate_time.replace(' ', 'T') + '+08:00', // 保持本地时间，添加时区信息
     operator: "我是操作人",
     operator_id: 1001,
-    remark: batchForm.remark
+    remark: batchForm.remark,
+    shop_id: batchForm.shop_id
   }
   
   batchOutboundStock(data).then(() => {
@@ -166,7 +225,15 @@ function submitBatchForm() {
 }
 
 onMounted(() => {
+  loadUserInfo()
   loadGoodsOptions()
+  
+  // 监听全局店铺切换事件
+  window.addEventListener('shopChanged', (event) => {
+    if (isRoot.value) {
+      handleShopChange(event.detail.shopId)
+    }
+  })
 })
 </script>
 
@@ -241,6 +308,36 @@ onMounted(() => {
     
     <el-card>
       <el-form label-width="120px" style="max-width: 1200px">
+        <!-- 店铺选择 -->
+        <el-form-item label="所属店铺" style="margin-bottom: 20px;">
+          <div style="display: flex; gap: 20px; align-items: center;">
+            <div style="flex: 1; display: flex; align-items: center; gap: 12px;">
+              <!-- Root用户显示店铺选择器 -->
+              <el-select
+                v-if="isRoot && shopList.length > 0"
+                v-model="selectedShopId"
+                placeholder="请选择店铺"
+                style="flex: 1;"
+                @change="handleShopChange"
+              >
+                <el-option
+                  v-for="shop in shopList"
+                  :key="shop.id"
+                  :label="shop.name"
+                  :value="shop.id"
+                />
+              </el-select>
+              <!-- 普通管理员显示固定店铺 -->
+              <el-input
+                v-else
+                :value="getCurrentShopName()"
+                disabled
+                style="flex: 1;"
+              />
+            </div>
+          </div>
+        </el-form-item>
+        
         <el-form-item label="客户" style="margin-bottom: 20px;">
           <div style="display: flex; gap: 20px; align-items: center;">
             <div style="flex: 1; display: flex; align-items: center; gap: 12px;">

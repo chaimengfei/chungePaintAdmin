@@ -112,6 +112,12 @@ const currentPage = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
 
+// 用户权限相关
+const isRoot = ref(false)
+const shopInfo = ref(null)
+const shopList = ref([])
+const selectedShopId = ref(null)
+
 // 加载出库列表
 function loadOutboundList() {
   loading.value = true

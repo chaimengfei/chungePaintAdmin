@@ -4,25 +4,71 @@
       <h1 style="font-size: 32px; font-weight: bold; color: #303133;">地址列表</h1>
     </div>
     
-    <el-card>
-      <!-- 搜索区域 -->
-      <div style="margin-bottom: 20px; display: flex; gap: 16px; align-items: center;">
-        <el-input
-          v-model="searchForm.user_id"
-          placeholder="请输入用户ID"
-          style="width: 150px;"
-          clearable
-        />
-        <el-input
-          v-model="searchForm.user_name"
-          placeholder="请输入用户姓名"
-          style="width: 200px;"
-          clearable
-        />
-        <el-button type="primary" @click="loadAddressList">搜索</el-button>
-        <el-button @click="resetSearch">重置</el-button>
-        <el-button type="success" @click="showAddDialog">新增地址</el-button>
+    <!-- 筛选面板 -->
+    <el-card style="margin-bottom: 20px;">
+      <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+        <!-- 店铺筛选 -->
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="color: #606266; white-space: nowrap;">店铺：</span>
+          <!-- Root用户显示店铺选择器 -->
+          <el-select
+            v-if="isRoot && shopList.length > 0"
+            v-model="selectedShopId"
+            placeholder="请选择店铺"
+            style="width: 150px;"
+            @change="handleShopChange"
+          >
+            <el-option
+              v-for="shop in shopList"
+              :key="shop.id"
+              :label="shop.name"
+              :value="shop.id"
+            />
+          </el-select>
+          <!-- 普通管理员显示固定店铺 -->
+          <el-input
+            v-else
+            :value="getCurrentShopName()"
+            disabled
+            style="width: 150px;"
+          />
+        </div>
+        
+        <!-- 用户ID搜索 -->
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="color: #606266; white-space: nowrap;">用户ID：</span>
+          <el-input
+            v-model="searchForm.user_id"
+            placeholder="请输入用户ID"
+            style="width: 150px;"
+            clearable
+          />
+        </div>
+        
+        <!-- 用户姓名搜索 -->
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="color: #606266; white-space: nowrap;">用户姓名：</span>
+          <el-input
+            v-model="searchForm.user_name"
+            placeholder="请输入用户姓名"
+            style="width: 150px;"
+            clearable
+          />
+        </div>
+        
+        <!-- 操作按钮 -->
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <el-button type="primary" @click="loadAddressList">搜索</el-button>
+          <el-button @click="resetSearch">重置</el-button>
+          <el-button type="warning" @click="showAddDialog" style="font-size: 20px; padding: 16px 32px; font-weight: bold; height: auto;">
+            <el-icon style="margin-right: 10px; font-size: 22px;"><Plus /></el-icon>
+            新增地址
+          </el-button>
+        </div>
       </div>
+    </el-card>
+    
+    <el-card>
 
       <!-- 地址表格 -->
       <el-table :data="addressList" style="width: 100%" v-loading="loading" border>
@@ -89,6 +135,31 @@
             placeholder="请输入用户ID"
             clearable
           />
+        </el-form-item>
+        
+        <el-form-item label="所属店铺" prop="shop_id">
+          <!-- 普通管理员显示固定店铺 -->
+          <el-input 
+            v-if="!isRoot && shopInfo" 
+            :value="shopInfo.name" 
+            disabled 
+            style="width: 100%;"
+          />
+          <!-- Root用户显示店铺选择器 -->
+          <el-select 
+            v-else-if="isRoot && shopList.length > 0"
+            v-model="addForm.shop_id" 
+            placeholder="请选择店铺" 
+            style="width: 100%;"
+          >
+            <el-option
+              v-for="shop in shopList"
+              :key="shop.id"
+              :label="shop.name"
+              :value="shop.id"
+            />
+          </el-select>
+          <span v-else style="color: #909399;">暂无店铺信息</span>
         </el-form-item>
         
         <el-form-item label="收货人" prop="recipient_name">
@@ -182,6 +253,31 @@
           />
         </el-form-item>
         
+        <el-form-item label="所属店铺" prop="shop_id">
+          <!-- 普通管理员显示固定店铺 -->
+          <el-input 
+            v-if="!isRoot && shopInfo" 
+            :value="shopInfo.name" 
+            disabled 
+            style="width: 100%;"
+          />
+          <!-- Root用户显示店铺选择器 -->
+          <el-select 
+            v-else-if="isRoot && shopList.length > 0"
+            v-model="editForm.shop_id" 
+            placeholder="请选择店铺" 
+            style="width: 100%;"
+          >
+            <el-option
+              v-for="shop in shopList"
+              :key="shop.id"
+              :label="shop.name"
+              :value="shop.id"
+            />
+          </el-select>
+          <span v-else style="color: #909399;">暂无店铺信息</span>
+        </el-form-item>
+        
         <el-form-item label="收货人" prop="recipient_name">
           <el-input
             v-model="editForm.recipient_name"
@@ -258,6 +354,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Plus } from '@element-plus/icons-vue'
 import { getAddressList, addAddress, editAddress as editAddressApi, deleteAddress as deleteAddressApi } from '../api/address'
 
 const route = useRoute()
@@ -266,6 +363,58 @@ const loading = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
+
+// 用户权限相关
+const isRoot = ref(false)
+const shopInfo = ref(null)
+const shopList = ref([])
+const selectedShopId = ref(null)
+
+// 加载用户权限信息
+function loadUserInfo() {
+  const shop = localStorage.getItem('shop_info')
+  const shops = localStorage.getItem('shop_list')
+  
+  // 判断是否为root用户
+  isRoot.value = !shop || shop === 'null'
+  
+  if (shop && shop !== 'null') {
+    try {
+      shopInfo.value = JSON.parse(shop)
+    } catch (error) {
+      console.error('解析店铺信息失败:', error)
+    }
+  }
+  
+  if (shops && shops !== 'null') {
+    try {
+      shopList.value = JSON.parse(shops)
+      if (isRoot.value && shopList.value.length > 0) {
+        selectedShopId.value = shopList.value[0].id
+      }
+    } catch (error) {
+      console.error('解析店铺列表失败:', error)
+    }
+  }
+}
+
+// 获取当前店铺名称
+function getCurrentShopName() {
+  if (isRoot.value && selectedShopId.value) {
+    const selectedShop = shopList.value.find(shop => shop.id === selectedShopId.value)
+    return selectedShop ? selectedShop.name : '请选择店铺'
+  } else if (!isRoot.value && shopInfo.value) {
+    return shopInfo.value.name
+  }
+  return '未知店铺'
+}
+
+// 处理店铺切换
+function handleShopChange(shopId) {
+  selectedShopId.value = shopId
+  currentPage.value = 1 // 重置到第一页
+  loadAddressList()
+}
 
 // 搜索表单
 const searchForm = reactive({
@@ -285,7 +434,8 @@ const addForm = reactive({
   city: '',
   district: '',
   detail: '',
-  is_default: false
+  is_default: false,
+  shop_id: null  // 店铺ID
 })
 
 // 编辑地址相关
@@ -301,7 +451,8 @@ const editForm = reactive({
   city: '',
   district: '',
   detail: '',
-  is_default: false
+  is_default: false,
+  shop_id: null  // 店铺ID
 })
 
 // 表单验证规则
@@ -335,9 +486,18 @@ const addressFormRules = {
 // 加载地址列表
 function loadAddressList() {
   loading.value = true
+  
+  // 构建请求参数
   const params = {
     page: currentPage.value,
     page_size: pageSize.value
+  }
+  
+  // 添加店铺ID参数
+  if (isRoot.value && selectedShopId.value) {
+    params.shop_id = selectedShopId.value
+  } else if (!isRoot.value && shopInfo.value) {
+    params.shop_id = shopInfo.value.id
   }
   
   if (searchForm.user_id) {
@@ -373,7 +533,14 @@ function resetSearch() {
 // 显示新增地址弹窗
 function showAddDialog() {
   addDialogVisible.value = true
-  // 重置表单
+  // 重置表单并设置店铺ID
+  let shopId = null
+  if (isRoot.value && selectedShopId.value) {
+    shopId = selectedShopId.value
+  } else if (!isRoot.value && shopInfo.value) {
+    shopId = shopInfo.value.id
+  }
+  
   Object.assign(addForm, {
     user_id: '',
     recipient_name: '',
@@ -382,7 +549,8 @@ function showAddDialog() {
     city: '',
     district: '',
     detail: '',
-    is_default: false
+    is_default: false,
+    shop_id: shopId
   })
 }
 
@@ -415,6 +583,15 @@ function submitAddForm() {
 // 编辑地址
 function editAddress(address) {
   editDialogVisible.value = true
+  
+  // 设置店铺ID
+  let shopId = null
+  if (isRoot.value && selectedShopId.value) {
+    shopId = selectedShopId.value
+  } else if (!isRoot.value && shopInfo.value) {
+    shopId = shopInfo.value.id
+  }
+  
   Object.assign(editForm, {
     id: address.address_id,
     user_id: address.user_id,
@@ -424,7 +601,8 @@ function editAddress(address) {
     city: address.city,
     district: address.district,
     detail: address.detail,
-    is_default: address.is_default
+    is_default: address.is_default,
+    shop_id: shopId
   })
 }
 
@@ -508,6 +686,8 @@ function handleCurrentChange(val) {
 }
 
 onMounted(() => {
+  loadUserInfo()
+  
   // 检查URL参数，如果有用户信息则自动填充搜索条件
   if (route.query.user_id) {
     searchForm.user_id = route.query.user_id
@@ -517,6 +697,13 @@ onMounted(() => {
   }
   
   loadAddressList()
+  
+  // 监听全局店铺切换事件
+  window.addEventListener('shopChanged', (event) => {
+    if (isRoot.value) {
+      handleShopChange(event.detail.shopId)
+    }
+  })
 })
 </script>
 

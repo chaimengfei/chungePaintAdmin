@@ -33,23 +33,32 @@
             style="width: 150px;"
           />
         </div>
+        
+        <!-- 用户搜索 -->
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="color: #606266; white-space: nowrap;">搜索：</span>
+          <el-input
+            v-model="searchKeyword"
+            placeholder="请输入用户姓名或手机号"
+            style="width: 200px;"
+            clearable
+            @keyup.enter="loadUserList"
+          />
+        </div>
+        
+        <!-- 操作按钮 -->
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <el-button type="primary" @click="loadUserList">搜索</el-button>
+          <el-button @click="resetSearch">重置</el-button>
+          <el-button type="warning" @click="showAddDialog" style="font-size: 20px; padding: 16px 32px; font-weight: bold; height: auto;">
+            <el-icon style="margin-right: 10px; font-size: 22px;"><Plus /></el-icon>
+            添加用户
+          </el-button>
+        </div>
       </div>
     </el-card>
     
     <el-card>
-      <!-- 搜索区域 -->
-      <div style="margin-bottom: 20px; display: flex; gap: 16px; align-items: center;">
-        <el-input
-          v-model="searchKeyword"
-          placeholder="请输入用户姓名或手机号"
-          style="width: 300px;"
-          clearable
-          @keyup.enter="loadUserList"
-        />
-        <el-button type="primary" @click="loadUserList">搜索</el-button>
-        <el-button @click="resetSearch">重置</el-button>
-        <el-button type="success" @click="showAddDialog">添加用户</el-button>
-      </div>
 
       <!-- 用户表格 -->
       <el-table :data="userList" style="width: 100%" v-loading="loading" border>
@@ -195,6 +204,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Plus } from '@element-plus/icons-vue'
 import { getUserList, deleteUser as deleteUserApi, addUser } from '../api/user'
 
 const router = useRouter()

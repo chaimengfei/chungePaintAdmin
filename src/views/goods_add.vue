@@ -6,9 +6,9 @@
     
     <el-card>
       <el-form :model="form" :rules="rules" ref="formRef" label-width="120px" style="max-width: 800px;">
-        <!-- 第一行：店铺选择 -->
+        <!-- 第一行：店铺选择、分类 -->
         <el-row :gutter="20">
-          <el-col :span="24">
+          <el-col :span="12">
             <el-form-item label="所属店铺" prop="shop_id">
               <!-- 普通管理员显示固定店铺 -->
               <el-input 
@@ -34,29 +34,6 @@
               <span v-else style="color: #909399;">暂无店铺信息</span>
             </el-form-item>
           </el-col>
-        </el-row>
-        
-        <!-- 第二行：名称、单位 -->
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="名称" prop="name">
-              <el-input v-model="form.name" placeholder="请输入名称" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="单位" prop="unit">
-              <el-select v-model="form.unit" placeholder="请选择单位" style="width: 100%;">
-                <el-option label="桶" value="桶" />
-                <el-option label="箱" value="箱" />
-                <el-option label="L" value="L" />
-                <el-option label="卷" value="卷" />
-              </el-select>
-            </el-form-item>
-          </el-col>
-        </el-row>
-        
-        <!-- 第二行：分类、规格 -->
-        <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="分类" prop="category_id">
               <el-select v-model="form.category_id" placeholder="请选择分类" style="width: 100%;">
@@ -69,12 +46,31 @@
               </el-select>
             </el-form-item>
           </el-col>
+        </el-row>
+        
+        <!-- 第二行：名称、单位、规格 -->
+        <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="规格" prop="specification">
+            <el-form-item label="名称" prop="name">
+              <el-input v-model="form.name" placeholder="请输入名称" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="6">
+            <el-form-item label="单位" prop="unit">
+              <el-select v-model="form.unit" placeholder="请选择单位" style="width: 100%;">
+                <el-option label="桶" value="桶" />
+                <el-option label="箱" value="箱" />
+                <el-option label="L" value="L" />
+                <el-option label="卷" value="卷" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="6">
+            <el-form-item label="规格" prop="specification" label-width="80px">
               <template #label>
-                <span>规格</span>
+                <span style="margin-left: -20px;">规格</span>
                 <el-tooltip content="3KG*4、4L、8L等" placement="top">
-                  <el-icon style="margin-left: 4px; cursor: pointer;"><QuestionFilled /></el-icon>
+                  <el-icon style="margin-left: 4px; cursor: pointer; font-size: 12px;"><QuestionFilled /></el-icon>
                 </el-tooltip>
               </template>
               <el-input v-model="form.specification" placeholder="可不填" />
@@ -82,20 +78,83 @@
           </el-col>
         </el-row>
         
-        <!-- 第三行：售价、状态 -->
+        <!-- 第三行：进价、运费、成本 -->
+        <el-row :gutter="20">
+          <el-col :span="8">
+            <el-form-item label="进价" prop="product_cost">
+              <el-input-number 
+                v-model="form.product_cost" 
+                :min="0" 
+                :step="1" 
+                placeholder="请输入进价"
+                style="width: 100%;"
+                @change="calculateTotalCost"
+                @input="calculateTotalCost"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="运费" prop="shipping_cost">
+              <el-input-number 
+                v-model="form.shipping_cost" 
+                :min="0" 
+                :step="1" 
+                placeholder="请输入运费"
+                style="width: 100%;"
+                @change="calculateTotalCost"
+                @input="calculateTotalCost"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="成本" prop="cost">
+              <template #label>
+                <span>成本</span>
+                <el-tooltip content="成本=进价+运费" placement="top">
+                  <el-icon style="margin-left: 4px; cursor: pointer; font-size: 12px;"><QuestionFilled /></el-icon>
+                </el-tooltip>
+              </template>
+              <el-input-number 
+                v-model="form.cost" 
+                :min="0" 
+                :step="1" 
+                placeholder="自动计算"
+                style="width: 100%;"
+                readonly
+                disabled
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        
+        <!-- 第四行：售价、库存 -->
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="售价" prop="seller_price">
               <el-input-number 
                 v-model="form.seller_price" 
-                :precision="2" 
                 :min="0" 
-                :step="0.01" 
+                :step="1" 
                 placeholder="请输入售价"
                 style="width: 100%;"
               />
             </el-form-item>
           </el-col>
+          <el-col :span="12">
+            <el-form-item label="库存" prop="stock">
+              <el-input-number 
+                v-model="form.stock" 
+                :min="0" 
+                :step="1" 
+                placeholder="请输入库存"
+                style="width: 100%;"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        
+        <!-- 第五行：状态 -->
+        <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="状态" prop="is_on_shelf">
               <el-radio-group v-model="form.is_on_shelf">
@@ -106,7 +165,7 @@
           </el-col>
         </el-row>
         
-        <!-- 第四行：图片 -->
+        <!-- 第六行：图片 -->
         <el-form-item label="图片" prop="image">
           <el-upload
             class="avatar-uploader"
@@ -134,7 +193,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Plus, QuestionFilled } from '@element-plus/icons-vue'
@@ -156,7 +215,11 @@ const form = reactive({
   category_id: '',
   unit: '',
   specification: '',
+  product_cost: 0,
+  shipping_cost: 0,
+  cost: 0,
   seller_price: 0,
+  stock: 0,
   remark: '',
   image: '',
   is_on_shelf: 1,
@@ -180,8 +243,17 @@ const rules = {
   specification: [
     // 规格为可选字段，不需要必填验证
   ],
+  product_cost: [
+    { required: true, message: '请输入进价', trigger: 'blur' }
+  ],
+  shipping_cost: [
+    { required: true, message: '请输入运费', trigger: 'blur' }
+  ],
   seller_price: [
     { required: true, message: '请输入售价', trigger: 'blur' }
+  ],
+  stock: [
+    { required: true, message: '请输入库存', trigger: 'blur' }
   ],
   is_on_shelf: [
     { required: true, message: '请选择状态', trigger: 'change' }
@@ -195,6 +267,16 @@ const rules = {
 const uploadUrl = '/admin/product/upload/image' // 根据实际的上传接口调整
 const uploadHeaders = {
   Authorization: `Bearer ${localStorage.getItem('token')}`
+}
+
+// 计算总成本
+function calculateTotalCost() {
+  nextTick(() => {
+    const productCost = Number(form.product_cost) || 0
+    const shippingCost = Number(form.shipping_cost) || 0
+    const totalCost = productCost + shippingCost
+    form.cost = Math.round(totalCost)
+  })
 }
 
 // 加载分类列表
@@ -299,6 +381,7 @@ function loadUserInfo() {
 onMounted(() => {
   loadUserInfo()
   loadCategories()
+  calculateTotalCost() // 初始化时计算一次成本
 })
 </script>
 

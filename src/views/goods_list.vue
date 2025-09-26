@@ -309,16 +309,16 @@ onMounted(() => {
   font-size: 27px !important;
   padding: 22px 45px !important;
   font-weight: bold !important;
-  background-color: #ff6b35 !important;
-  border-color: #ff6b35 !important;
+  background-color: #e55a2b !important;
+  border-color: #e55a2b !important;
   color: white !important;
   box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3) !important;
   transition: all 0.3s ease !important;
 }
 
 .add-goods-btn:hover {
-  background-color: #ff5722 !important;
-  border-color: #ff5722 !important;
+  background-color: #d44a1f !important;
+  border-color: #d44a1f !important;
   transform: translateY(-2px) !important;
   box-shadow: 0 6px 16px rgba(255, 107, 53, 0.4) !important;
 }

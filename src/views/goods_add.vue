@@ -164,6 +164,9 @@ const form = reactive({
 })
 
 const rules = {
+  shop_id: [
+    { required: true, message: '请选择店铺', trigger: 'change' }
+  ],
   name: [
     { required: true, message: '请输入名称', trigger: 'blur' },
     { min: 1, max: 100, message: '名称长度在 1 到 100 个字符', trigger: 'blur' }
@@ -191,7 +194,7 @@ const rules = {
 // 上传相关配置
 const uploadUrl = '/admin/product/upload/image' // 根据实际的上传接口调整
 const uploadHeaders = {
-  // 如果需要认证token，在这里添加
+  Authorization: `Bearer ${localStorage.getItem('token')}`
 }
 
 // 加载分类列表

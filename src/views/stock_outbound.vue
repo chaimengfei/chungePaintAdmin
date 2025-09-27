@@ -29,10 +29,7 @@ const batchForm = reactive({
 
 const goodsOptions = ref([])
 const goodsMap = ref({})
-const customerOptions = ref([
-  { label: '张三', value: '张三', user_id: 123 },
-  { label: '李四', value: '李四', user_id: 456 }
-])
+const customerOptions = ref([])
 
 // 用户权限相关
 const isRoot = ref(false)
@@ -53,6 +50,36 @@ function loadGoodsOptions() {
         goodsMap.value[item.id] = item
       })
     }
+  })
+}
+
+// 加载客户列表
+function loadCustomerOptions() {
+  const shopId = batchForm.shop_id
+  if (!shopId) {
+    customerOptions.value = []
+    return
+  }
+  
+  request.get('/user/list', { 
+    params: { 
+      page: 1, 
+      page_size: 100, 
+      shop_id: shopId 
+    } 
+  }).then(res => {
+    if (res.code === 0) {
+      const list = res.data.list || []
+      customerOptions.value = list.map(item => ({
+        label: item.admin_display_name || item.name || '未知用户',
+        value: item.admin_display_name || item.name || '未知用户',
+        user_id: item.id
+      }))
+    } else {
+      ElMessage.error(res.message || '获取客户列表失败')
+    }
+  }).catch(() => {
+    ElMessage.error('获取客户列表失败')
   })
 }
 
@@ -105,6 +132,8 @@ function getCurrentShopName() {
 function handleShopChange(shopId) {
   selectedShopId.value = shopId
   batchForm.shop_id = shopId
+  // 重新加载客户列表
+  loadCustomerOptions()
 }
 
 function addBatchItem() {
@@ -132,13 +161,13 @@ function onProductChange(item, productId) {
     // 调用商品详情接口获取最新信息
     request.get(`/product/${productId}`).then(res => {
       if (res.code === 0 && res.data) {
-        const product = res.data
+        const product = res.data.product || res.data
         item.product_name = product.name
         item.unit = product.unit || '个'
         item.specification = product.specification || ''
         item.default_price = product.seller_price || 0
-        // 不自动填充单价，让用户手动输入
-        item.unit_price = 0
+        // 默认展示单价
+        item.unit_price = product.seller_price || 0
         item.total_price = 0
       }
     }).catch(() => {
@@ -227,6 +256,7 @@ function submitBatchForm() {
 onMounted(() => {
   loadUserInfo()
   loadGoodsOptions()
+  loadCustomerOptions()
   
   // 监听全局店铺切换事件
   window.addEventListener('shopChanged', (event) => {
@@ -383,11 +413,11 @@ onMounted(() => {
               </div>
               <div class="form-group">
                 <label>规格</label>
-                <el-input v-model="item.specification" placeholder="规格" readonly />
+                <el-input v-model="item.specification" placeholder="规格" disabled />
               </div>
               <div class="form-group">
                 <label>单位</label>
-                <el-input v-model="item.unit" placeholder="单位" readonly />
+                <el-input v-model="item.unit" placeholder="单位" disabled />
               </div>
             </div>
             
@@ -417,7 +447,7 @@ onMounted(() => {
               </div>
               <div class="form-group">
                 <label>金额</label>
-                <el-input v-model.number="item.total_price" type="number" min="0" step="0.01" placeholder="金额" readonly />
+                <el-input v-model.number="item.total_price" type="number" min="0" step="0.01" placeholder="金额" disabled />
               </div>
             </div>
             

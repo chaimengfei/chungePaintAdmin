@@ -40,6 +40,7 @@
       <el-table :data="inboundList" style="width: 100%" v-loading="loading" border>
         <el-table-column prop="operation_no" label="入库单号" width="200" />
         <el-table-column prop="operator" label="操作人" width="120" />
+        <el-table-column prop="supplier" label="供应商" width="120" />
         <el-table-column label="入库类型" width="100">
           <template #default="scope">
             <el-tag :type="scope.row.outbound_type === 1 ? 'success' : 'primary'">
@@ -57,11 +58,6 @@
             ¥{{ scope.row.total_amount?.toFixed(2) || '0.00' }}
           </template>
         </el-table-column>
-        <el-table-column prop="created_at" label="入库时间" width="180">
-          <template #default="scope">
-            {{ formatDateTime(scope.row.created_at) }}
-          </template>
-        </el-table-column>
         <el-table-column label="商品详情" min-width="300">
           <template #default="scope">
             <div v-if="scope.row.items && scope.row.items.length > 0" style="border: 1px solid #e4e7ed; border-radius: 4px; padding: 8px; background-color: #fafafa;">
@@ -74,6 +70,11 @@
               </div>
             </div>
             <div v-else style="color: #909399; font-size: 12px;">暂无商品明细</div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="created_at" label="时间" width="180">
+          <template #default="scope">
+            {{ formatDateTime(scope.row.created_at) }}
           </template>
         </el-table-column>
         <el-table-column label="操作" width="120" fixed="right">
@@ -219,6 +220,7 @@ function viewDetail(row) {
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
         <div><strong>入库单号：</strong>${row.operation_no}</div>
         <div><strong>操作人：</strong>${row.operator || '无'}</div>
+        <div><strong>供应商：</strong>${row.supplier || '无'}</div>
         <div><strong>入库时间：</strong>${formatDateTime(row.created_at)}</div>
         <div><strong>总数量：</strong>${row.total_quantity || 0}</div>
         <div><strong>总金额：</strong>¥${row.total_amount?.toFixed(2) || '0.00'}</div>

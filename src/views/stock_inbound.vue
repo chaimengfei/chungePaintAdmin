@@ -144,13 +144,16 @@ function onProductChange(item, productId) {
     // 调用商品详情接口获取最新信息
     request.get(`/product/${productId}`).then(res => {
       if (res.code === 0 && res.data) {
-        const product = res.data
+        // 根据API返回的数据结构，商品数据可能在 res.data.product 中
+        const product = res.data.product || res.data
         item.product_name = product.name
         item.unit = product.unit || '个'
         item.specification = product.specification || ''
-        // 清空金额字段，等待用户输入进价和数量后自动计算
+        // 进价默认展示上一次进价（product_cost）
+        item.cost_per_unit = product.product_cost || 0
+        // 清空金额字段，等待用户输入数量后自动计算
         item.goods_total_amount = 0
-        // 进价现在由用户手动输入，不清空
+        console.log('商品信息已填充:', { name: product.name, unit: product.unit, specification: product.specification, product_cost: product.product_cost })
       }
     }).catch(() => {
       ElMessage.error('获取商品信息失败')
@@ -159,8 +162,8 @@ function onProductChange(item, productId) {
     item.product_name = ''
     item.unit = ''
     item.specification = ''
+    item.cost_per_unit = 0
     item.goods_total_amount = 0
-    // 进价现在由用户手动输入，不清空
   }
 }
 
@@ -215,11 +218,14 @@ function submitBatchForm() {
     remark: item.remark || ''
   }))
   
+  // 获取当前登录用户信息
+  const operatorInfo = JSON.parse(localStorage.getItem('operator') || '{}')
+  
   const data = {
     items: items,
     total_amount: totalSpent.value,
-    operator: "张三",
-    operator_id: 1001,
+    operator: operatorInfo.real_name || operatorInfo.name || '未知用户',
+    operator_id: operatorInfo.id || 0,
     supplier: supplier.name,
     remark: batchForm.remark || '',
     shop_id: batchForm.shop_id
@@ -391,18 +397,23 @@ onMounted(() => {
               </div>
               <div class="form-group">
                 <label>规格</label>
-                <el-input v-model="item.specification" placeholder="规格" readonly />
+                <el-input v-model="item.specification" placeholder="规格" disabled />
               </div>
               <div class="form-group">
                 <label>单位</label>
-                <el-input v-model="item.unit" placeholder="单位" readonly />
+                <el-input v-model="item.unit" placeholder="单位" disabled />
               </div>
             </div>
             
             <!-- 第二行：进价、数量、金额 -->
             <div class="item-row">
               <div class="form-group">
-                <label>进价</label>
+                <label>
+                  进价
+                  <el-tooltip content="默认展示上一次的进价，有变动也可手动填充" placement="top">
+                    <el-icon style="margin-left: 4px; cursor: pointer; font-size: 12px;"><QuestionFilled /></el-icon>
+                  </el-tooltip>
+                </label>
                 <el-input v-model.number="item.cost_per_unit" type="number" min="0" step="0.01" placeholder="请输入进价" @input="calculateCosts(item)" />
               </div>
               <div class="form-group">
@@ -411,7 +422,7 @@ onMounted(() => {
               </div>
               <div class="form-group">
                 <label>金额</label>
-                <el-input v-model.number="item.goods_total_amount" type="number" min="0" step="0.01" placeholder="自动计算" readonly />
+                <el-input v-model.number="item.goods_total_amount" type="number" min="0" step="0.01" placeholder="自动计算" disabled />
               </div>
             </div>
             
@@ -437,7 +448,7 @@ onMounted(() => {
         <el-form-item label="总金额">
           <div style="display: flex; gap: 20px; align-items: center;">
             <div style="flex: 1;">
-              <el-input v-model="totalSpent" readonly style="width: 200px;">
+              <el-input v-model="totalSpent" disabled style="width: 200px;">
                 <template #prepend>¥</template>
               </el-input>
             </div>

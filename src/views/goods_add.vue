@@ -167,20 +167,23 @@
         
         <!-- 第六行：图片 -->
         <el-form-item label="图片" prop="image">
-          <el-upload
-            class="avatar-uploader"
-            :action="uploadUrl"
-            :show-file-list="false"
-            :on-success="handleImageSuccess"
-            :before-upload="beforeImageUpload"
-            :headers="uploadHeaders"
-          >
+          <div class="avatar-uploader" @click="handleImageUpload">
             <img v-if="form.image" :src="form.image" class="avatar" />
             <div v-else class="avatar-uploader-placeholder">
-              <el-icon class="avatar-uploader-icon"><Plus /></el-icon>
-              <div class="upload-text">请选择本地图片，支持 jpg、png 格式</div>
+              <el-icon v-if="!uploading" class="avatar-uploader-icon"><Plus /></el-icon>
+              <el-icon v-else class="avatar-uploader-icon is-loading"><Loading /></el-icon>
+              <div class="upload-text">
+                {{ uploading ? `上传中... ${uploadProgress}%` : '请选择本地图片，支持 jpg、png 格式' }}
+              </div>
             </div>
-          </el-upload>
+          </div>
+          <input 
+            ref="fileInput" 
+            type="file" 
+            accept="image/jpeg,image/jpg,image/png" 
+            style="display: none" 
+            @change="onFileChange"
+          />
         </el-form-item>
         
         <el-form-item>
@@ -192,18 +195,80 @@
   </div>
 </template>
 
+<style scoped>
+.avatar-uploader {
+  width: 200px;
+  height: 200px;
+  border: 2px dashed #d9d9d9;
+  border-radius: 4px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.3s;
+}
+
+.avatar-uploader:hover {
+  border-color: #409eff;
+}
+
+.avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.avatar-uploader-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #8c939d;
+}
+
+.avatar-uploader-icon {
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+
+.avatar-uploader-icon.is-loading {
+  animation: rotating 2s linear infinite;
+}
+
+.upload-text {
+  font-size: 14px;
+  text-align: center;
+  line-height: 1.4;
+}
+
+@keyframes rotating {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+</style>
+
 <script setup>
 import { ref, reactive, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Plus, QuestionFilled } from '@element-plus/icons-vue'
+import { Plus, QuestionFilled, Loading } from '@element-plus/icons-vue'
 import { getCategoryList } from '../api/category'
 import { addProduct } from '../api/stock'
+import { uploadToOSS, validateFile } from '../utils/ossUpload'
 
 const router = useRouter()
 const categories = ref([])
 const submitLoading = ref(false)
 const formRef = ref()
+const fileInput = ref()
+const uploading = ref(false)
+const uploadProgress = ref(0)
 
 // 用户权限相关
 const isRoot = ref(false)
@@ -263,10 +328,48 @@ const rules = {
   ]
 }
 
-// 上传相关配置
-const uploadUrl = '/admin/product/upload/image' // 根据实际的上传接口调整
-const uploadHeaders = {
-  Authorization: `Bearer ${localStorage.getItem('token')}`
+// 图片上传相关函数
+function handleImageUpload() {
+  if (uploading.value) return
+  fileInput.value.click()
+}
+
+function onFileChange(event) {
+  const file = event.target.files[0]
+  if (!file) return
+  
+  // 验证文件
+  const validation = validateFile(file)
+  if (!validation.valid) {
+    ElMessage.error(validation.message)
+    return
+  }
+  
+  // 开始上传
+  uploadFile(file)
+}
+
+async function uploadFile(file) {
+  try {
+    uploading.value = true
+    uploadProgress.value = 0
+    
+    const imageUrl = await uploadToOSS(file, (progress) => {
+      uploadProgress.value = progress
+    })
+    
+    form.image = imageUrl
+    ElMessage.success('图片上传成功')
+    
+  } catch (error) {
+    console.error('上传失败:', error)
+    ElMessage.error(error.message || '图片上传失败')
+  } finally {
+    uploading.value = false
+    uploadProgress.value = 0
+    // 清空input值，允许重复选择同一文件
+    fileInput.value.value = ''
+  }
 }
 
 // 计算总成本
@@ -293,32 +396,6 @@ function loadCategories() {
   })
 }
 
-// 图片上传成功
-function handleImageSuccess(res) {
-  if (res.code === 0) {
-    form.image = res.data
-    ElMessage.success('图片上传成功')
-  } else {
-    ElMessage.error('图片上传失败')
-  }
-}
-
-// 图片上传前验证
-function beforeImageUpload(file) {
-  const isJPG = file.type === 'image/jpeg'
-  const isPNG = file.type === 'image/png'
-  const isLt2M = file.size / 1024 / 1024 < 2
-
-  if (!isJPG && !isPNG) {
-    ElMessage.error('上传图片只能是 JPG 或 PNG 格式!')
-    return false
-  }
-  if (!isLt2M) {
-    ElMessage.error('上传图片大小不能超过 2MB!')
-    return false
-  }
-  return true
-}
 
 // 提交表单
 function handleSubmit() {

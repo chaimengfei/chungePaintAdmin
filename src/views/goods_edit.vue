@@ -3,12 +3,17 @@ import { reactive, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getProductDetail, addProduct, updateProduct } from '../api/stock'
 import { uploadGoodsImage } from '../api/oss'
+import { uploadToOSS, validateFile } from '../utils/ossUpload'
 import { ElMessage } from 'element-plus'
+import { Plus, Loading } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
 const loading = ref(false)
 const isEdit = ref(false)
+const fileInput = ref()
+const uploading = ref(false)
+const uploadProgress = ref(0)
 
 // 用户权限相关
 const isRoot = ref(false)
@@ -95,23 +100,48 @@ function loadProductDetail(id) {
   })
 }
 
-function handleUpload(e) {
-  const file = e.target.files[0]
+// 图片上传相关函数
+function handleImageUpload() {
+  if (uploading.value) return
+  fileInput.value.click()
+}
+
+function onFileChange(event) {
+  const file = event.target.files[0]
   if (!file) return
   
-  const fd = new FormData()
-  fd.append('file', file)
+  // 验证文件
+  const validation = validateFile(file)
+  if (!validation.valid) {
+    ElMessage.error(validation.message)
+    return
+  }
+  
+  // 开始上传
+  uploadFile(file)
+}
 
-  uploadGoodsImage(fd).then(res => {
-    if (res.code === 0) {
-      form.image = res.data
-      ElMessage.success('图片上传成功')
-    } else {
-      ElMessage.error('图片上传失败')
-    }
-  }).catch(() => {
-    ElMessage.error('图片上传失败')
-  })
+async function uploadFile(file) {
+  try {
+    uploading.value = true
+    uploadProgress.value = 0
+    
+    const imageUrl = await uploadToOSS(file, (progress) => {
+      uploadProgress.value = progress
+    })
+    
+    form.image = imageUrl
+    ElMessage.success('图片上传成功')
+    
+  } catch (error) {
+    console.error('上传失败:', error)
+    ElMessage.error(error.message || '图片上传失败')
+  } finally {
+    uploading.value = false
+    uploadProgress.value = 0
+    // 清空input值，允许重复选择同一文件
+    fileInput.value.value = ''
+  }
 }
 
 
@@ -291,14 +321,32 @@ function cancel() {
       </el-row>
       
       <el-form-item label="商品图片">
-        <div v-if="form.image">
-          <el-image 
-            :src="form.image" 
-            style="width: 200px; height: 200px; object-fit: cover; border-radius: 4px;"
-            :preview-src-list="[form.image]"
+        <div class="image-upload-container">
+          <div v-if="form.image" class="image-preview">
+            <el-image 
+              :src="form.image" 
+              style="width: 200px; height: 200px; object-fit: cover; border-radius: 4px;"
+              :preview-src-list="[form.image]"
+            />
+            <div class="image-actions">
+              <el-button size="small" @click="handleImageUpload">更换图片</el-button>
+            </div>
+          </div>
+          <div v-else class="image-upload-placeholder" @click="handleImageUpload">
+            <el-icon v-if="!uploading" class="upload-icon"><Plus /></el-icon>
+            <el-icon v-else class="upload-icon is-loading"><Loading /></el-icon>
+            <div class="upload-text">
+              {{ uploading ? `上传中... ${uploadProgress}%` : '点击上传图片' }}
+            </div>
+          </div>
+          <input 
+            ref="fileInput" 
+            type="file" 
+            accept="image/jpeg,image/jpg,image/png" 
+            style="display: none" 
+            @change="onFileChange"
           />
         </div>
-        <div v-else style="color: #909399;">暂无图片</div>
       </el-form-item>
       
       <el-form-item label="商品备注">
@@ -314,3 +362,64 @@ function cancel() {
     </el-form>
   </div>
 </template>
+
+<style scoped>
+.image-upload-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.image-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.image-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.image-upload-placeholder {
+  width: 200px;
+  height: 200px;
+  border: 2px dashed #d9d9d9;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.3s;
+}
+
+.image-upload-placeholder:hover {
+  border-color: #409eff;
+}
+
+.upload-icon {
+  font-size: 28px;
+  color: #8c939d;
+  margin-bottom: 8px;
+}
+
+.upload-icon.is-loading {
+  animation: rotating 2s linear infinite;
+}
+
+.upload-text {
+  color: #8c939d;
+  font-size: 14px;
+  text-align: center;
+}
+
+@keyframes rotating {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+</style>

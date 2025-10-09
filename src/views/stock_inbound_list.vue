@@ -33,6 +33,29 @@
             style="width: 150px;"
           />
         </div>
+        
+        <!-- 时间范围筛选 -->
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="color: #606266; white-space: nowrap;">时间：</span>
+          <el-date-picker
+            v-model="dateRange"
+            type="datetimerange"
+            range-separator="至"
+            start-placeholder="开始时间"
+            end-placeholder="结束时间"
+            format="YYYY-MM-DD HH:mm:ss"
+            value-format="YYYY-MM-DD HH:mm:ss"
+            style="width: 360px;"
+            @change="handleDateRangeChange"
+            clearable
+          />
+        </div>
+        
+        <!-- 操作按钮 -->
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <el-button type="primary" @click="handleSearch">查询</el-button>
+          <el-button @click="handleReset">重置</el-button>
+        </div>
       </div>
     </el-card>
     
@@ -117,6 +140,26 @@ const shopInfo = ref(null)
 const shopList = ref([])
 const selectedShopId = ref(null)
 
+// 时间范围筛选
+const dateRange = ref([])
+const startTime = ref('')
+const endTime = ref('')
+
+// 初始化默认时间范围（最近半年）
+function initDefaultDateRange() {
+  const now = new Date()
+  const sixMonthsAgo = new Date()
+  sixMonthsAgo.setMonth(now.getMonth() - 6)
+  
+  // 设置默认时间范围
+  const startDate = sixMonthsAgo.toISOString().slice(0, 19).replace('T', ' ')
+  const endDate = now.toISOString().slice(0, 19).replace('T', ' ')
+  
+  startTime.value = startDate
+  endTime.value = endDate
+  dateRange.value = [startDate, endDate]
+}
+
 // 加载用户权限信息
 function loadUserInfo() {
   const shop = localStorage.getItem('shop_info')
@@ -163,6 +206,32 @@ function handleShopChange(shopId) {
   loadInboundList()
 }
 
+// 处理时间范围变化
+function handleDateRangeChange(value) {
+  if (value && value.length === 2) {
+    startTime.value = value[0]
+    endTime.value = value[1]
+  } else {
+    startTime.value = ''
+    endTime.value = ''
+  }
+}
+
+// 查询按钮处理
+function handleSearch() {
+  currentPage.value = 1 // 重置到第一页
+  loadInboundList()
+}
+
+// 重置按钮处理
+function handleReset() {
+  dateRange.value = []
+  startTime.value = ''
+  endTime.value = ''
+  currentPage.value = 1
+  loadInboundList()
+}
+
 // 加载入库列表
 function loadInboundList() {
   loading.value = true
@@ -179,6 +248,14 @@ function loadInboundList() {
     params.shop_id = selectedShopId.value
   } else if (!isRoot.value && shopInfo.value) {
     params.shop_id = shopInfo.value.id
+  }
+  
+  // 添加时间范围参数
+  if (startTime.value) {
+    params.start_time = startTime.value
+  }
+  if (endTime.value) {
+    params.end_time = endTime.value
   }
   
   request.get('/stock/operations', { params }).then(res => {
@@ -272,6 +349,7 @@ function handleCurrentChange(val) {
 
 onMounted(() => {
   loadUserInfo()
+  initDefaultDateRange() // 初始化默认时间范围
   loadInboundList()
   
   // 监听全局店铺切换事件

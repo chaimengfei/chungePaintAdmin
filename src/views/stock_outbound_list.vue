@@ -4,6 +4,61 @@
       <h1 style="font-size: 32px; font-weight: bold; color: #303133;">出库-列表</h1>
     </div>
     
+    <!-- 筛选面板 -->
+    <el-card style="margin-bottom: 20px;">
+      <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+        <!-- 店铺筛选 -->
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="color: #606266; white-space: nowrap;">店铺：</span>
+          <!-- Root用户显示店铺选择器 -->
+          <el-select
+            v-if="isRoot && shopList.length > 0"
+            v-model="selectedShopId"
+            placeholder="请选择店铺"
+            style="width: 150px;"
+            @change="handleShopChange"
+          >
+            <el-option
+              v-for="shop in shopList"
+              :key="shop.id"
+              :label="shop.name"
+              :value="shop.id"
+            />
+          </el-select>
+          <!-- 普通管理员显示固定店铺 -->
+          <el-input
+            v-else
+            :value="getCurrentShopName()"
+            disabled
+            style="width: 150px;"
+          />
+        </div>
+        
+        <!-- 时间范围筛选 -->
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="color: #606266; white-space: nowrap;">时间：</span>
+          <el-date-picker
+            v-model="dateRange"
+            type="datetimerange"
+            range-separator="至"
+            start-placeholder="开始时间"
+            end-placeholder="结束时间"
+            format="YYYY-MM-DD HH:mm:ss"
+            value-format="YYYY-MM-DD HH:mm:ss"
+            style="width: 360px;"
+            @change="handleDateRangeChange"
+            clearable
+          />
+        </div>
+        
+        <!-- 操作按钮 -->
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <el-button type="primary" @click="handleSearch">查询</el-button>
+          <el-button @click="handleReset">重置</el-button>
+        </div>
+      </div>
+    </el-card>
+    
     <el-card>
       <el-table :data="outboundList" style="width: 100%" v-loading="loading" border>
         <el-table-column prop="operation_no" label="出库单号" width="200" />
@@ -77,12 +132,25 @@
             <div v-else style="color: #909399; font-size: 12px;">暂无商品明细</div>
           </template>
         </el-table-column>
+        <el-table-column prop="operator" label="操作人" width="120" />
+        <el-table-column label="单据" width="120">
+          <template #default="scope">
+            <div v-if="scope.row.invoice_url" class="invoice-image-container">
+              <img 
+                :src="scope.row.invoice_url" 
+                :alt="'单据图片'"
+                class="invoice-image"
+                @click="viewInvoice(scope.row.invoice_url)"
+              />
+            </div>
+            <span v-else style="color: #909399;">无单据</span>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="120" fixed="right">
           <template #default="scope">
             <el-button type="primary" size="small" @click="viewDetail(scope.row)">查看详情</el-button>
           </template>
         </el-table-column>
-        <el-table-column prop="operator" label="操作人" width="120" />
         <el-table-column prop="remark" label="备注" min-width="150" />
       </el-table>
       
@@ -118,16 +186,125 @@ const shopInfo = ref(null)
 const shopList = ref([])
 const selectedShopId = ref(null)
 
+// 时间范围筛选
+const dateRange = ref([])
+const startTime = ref('')
+const endTime = ref('')
+
+// 初始化默认时间范围（最近半年）
+function initDefaultDateRange() {
+  const now = new Date()
+  const sixMonthsAgo = new Date()
+  sixMonthsAgo.setMonth(now.getMonth() - 6)
+  
+  // 设置默认时间范围
+  const startDate = sixMonthsAgo.toISOString().slice(0, 19).replace('T', ' ')
+  const endDate = now.toISOString().slice(0, 19).replace('T', ' ')
+  
+  startTime.value = startDate
+  endTime.value = endDate
+  dateRange.value = [startDate, endDate]
+}
+
+// 加载用户权限信息
+function loadUserInfo() {
+  const shop = localStorage.getItem('shop_info')
+  const shops = localStorage.getItem('shop_list')
+  
+  // 判断是否为root用户
+  isRoot.value = !shop || shop === 'null'
+  
+  if (shop && shop !== 'null') {
+    try {
+      shopInfo.value = JSON.parse(shop)
+    } catch (error) {
+      console.error('解析店铺信息失败:', error)
+    }
+  }
+  
+  if (shops && shops !== 'null') {
+    try {
+      shopList.value = JSON.parse(shops)
+      if (isRoot.value && shopList.value.length > 0) {
+        selectedShopId.value = shopList.value[0].id
+      }
+    } catch (error) {
+      console.error('解析店铺列表失败:', error)
+    }
+  }
+}
+
+// 获取当前店铺名称
+function getCurrentShopName() {
+  if (isRoot.value && selectedShopId.value) {
+    const selectedShop = shopList.value.find(shop => shop.id === selectedShopId.value)
+    return selectedShop ? selectedShop.name : '请选择店铺'
+  } else if (!isRoot.value && shopInfo.value) {
+    return shopInfo.value.name
+  }
+  return '未知店铺'
+}
+
+// 处理店铺切换
+function handleShopChange(shopId) {
+  selectedShopId.value = shopId
+  currentPage.value = 1 // 重置到第一页
+  loadOutboundList()
+}
+
+// 处理时间范围变化
+function handleDateRangeChange(value) {
+  if (value && value.length === 2) {
+    startTime.value = value[0]
+    endTime.value = value[1]
+  } else {
+    startTime.value = ''
+    endTime.value = ''
+  }
+}
+
+// 查询按钮处理
+function handleSearch() {
+  currentPage.value = 1 // 重置到第一页
+  loadOutboundList()
+}
+
+// 重置按钮处理
+function handleReset() {
+  dateRange.value = []
+  startTime.value = ''
+  endTime.value = ''
+  currentPage.value = 1
+  loadOutboundList()
+}
+
 // 加载出库列表
 function loadOutboundList() {
   loading.value = true
-  request.get('/stock/operations', {
-    params: {
-      types: 2,
-      page: currentPage.value,
-      page_size: pageSize.value
-    }
-  }).then(res => {
+  
+  // 构建请求参数
+  const params = {
+    types: 2,
+    page: currentPage.value,
+    page_size: pageSize.value
+  }
+  
+  // 添加店铺ID参数
+  if (isRoot.value && selectedShopId.value) {
+    params.shop_id = selectedShopId.value
+  } else if (!isRoot.value && shopInfo.value) {
+    params.shop_id = shopInfo.value.id
+  }
+  
+  // 添加时间范围参数
+  if (startTime.value) {
+    params.start_time = startTime.value
+  }
+  if (endTime.value) {
+    params.end_time = endTime.value
+  }
+  
+  request.get('/stock/operations', { params }).then(res => {
     if (res.code === 0) {
       outboundList.value = res.data.list || []
       total.value = res.data.total || 0
@@ -195,6 +372,17 @@ function setPaymentStatus(row) {
   }).catch(() => {
     // 用户取消操作
   })
+}
+
+// 查看单据
+function viewInvoice(invoiceUrl) {
+  if (!invoiceUrl) {
+    ElMessage.warning('暂无单据')
+    return
+  }
+  
+  // 在新窗口中打开单据图片
+  window.open(invoiceUrl, '_blank')
 }
 
 // 查看详情
@@ -265,12 +453,46 @@ function handleCurrentChange(val) {
 }
 
 onMounted(() => {
+  loadUserInfo()
+  initDefaultDateRange() // 初始化默认时间范围
   loadOutboundList()
+  
+  // 监听全局店铺切换事件
+  window.addEventListener('shopChanged', (event) => {
+    if (isRoot.value) {
+      handleShopChange(event.detail.shopId)
+    }
+  })
 })
 </script>
 
 <style scoped>
 .el-table {
   margin-top: 20px;
+}
+
+/* 单据图片样式 */
+.invoice-image-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 60px;
+  width: 100px;
+  overflow: hidden;
+  border-radius: 4px;
+  border: 1px solid #e4e7ed;
+  background-color: #fafafa;
+}
+
+.invoice-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: cover;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.invoice-image:hover {
+  transform: scale(1.05);
 }
 </style>

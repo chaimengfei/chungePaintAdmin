@@ -14,7 +14,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/admin': {
-        target: 'http://192.168.1.3:8009', // 你的 Golang 后端地址
+        target: 'http://127.0.0.1:8009', // 你的 Golang 后端地址
         changeOrigin: true
       }
     }

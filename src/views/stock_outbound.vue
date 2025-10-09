@@ -2,9 +2,10 @@
 import { reactive, ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { QuestionFilled } from '@element-plus/icons-vue'
+import { QuestionFilled, Plus, Loading } from '@element-plus/icons-vue'
 import request from '../api/request'
 import { batchOutboundStock, getProductList } from '../api/stock'
+import { uploadToOSS, validateFile } from '../utils/ossUpload'
 
 const router = useRouter()
 
@@ -24,7 +25,8 @@ const batchForm = reactive({
   customer: null,
   operate_time: new Date().toLocaleString('sv-SE').slice(0, 19), // 默认当前本地日期时间
   remark: '',
-  shop_id: null  // 店铺ID
+  shop_id: null,  // 店铺ID
+  image: ''  // 相关图片
 })
 
 const goodsOptions = ref([])
@@ -36,6 +38,11 @@ const isRoot = ref(false)
 const shopInfo = ref(null)
 const shopList = ref([])
 const selectedShopId = ref(null)
+
+// 图片上传相关
+const fileInput = ref()
+const uploading = ref(false)
+const uploadProgress = ref(0)
 
 function loadGoodsOptions() {
   getProductList({ page: 1, page_size: 100 }).then(res => {
@@ -207,6 +214,50 @@ const totalAmount = computed(() => {
   return batchForm.items.reduce((sum, item) => sum + (item.total_price || 0), 0)
 })
 
+// 图片上传相关函数
+function handleImageUpload() {
+  if (uploading.value) return
+  fileInput.value.click()
+}
+
+function onFileChange(event) {
+  const file = event.target.files[0]
+  if (!file) return
+  
+  // 验证文件
+  const validation = validateFile(file)
+  if (!validation.valid) {
+    ElMessage.error(validation.message)
+    return
+  }
+  
+  // 开始上传
+  uploadFile(file)
+}
+
+async function uploadFile(file) {
+  try {
+    uploading.value = true
+    uploadProgress.value = 0
+    
+    const imageUrl = await uploadToOSS(file, (progress) => {
+      uploadProgress.value = progress
+    })
+    
+    batchForm.image = imageUrl
+    ElMessage.success('图片上传成功')
+    
+  } catch (error) {
+    console.error('上传失败:', error)
+    ElMessage.error(error.message || '图片上传失败')
+  } finally {
+    uploading.value = false
+    uploadProgress.value = 0
+    // 清空input值，允许重复选择同一文件
+    fileInput.value.value = ''
+  }
+}
+
 function submitBatchForm() {
   if (!batchForm.customer) {
     ElMessage.error('请选择客户')
@@ -242,7 +293,8 @@ function submitBatchForm() {
     operator: "我是操作人",
     operator_id: 1001,
     remark: batchForm.remark,
-    shop_id: batchForm.shop_id
+    shop_id: batchForm.shop_id,
+    invoice_url: batchForm.image  // 添加单据URL
   }
   
   batchOutboundStock(data).then(() => {
@@ -327,6 +379,63 @@ onMounted(() => {
 .el-input__inner::placeholder {
   color: #c0c4cc;
   font-style: italic;
+}
+
+/* 图片上传样式 */
+.avatar-uploader {
+  width: 200px;
+  height: 200px;
+  border: 2px dashed #d9d9d9;
+  border-radius: 4px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.3s;
+}
+
+.avatar-uploader:hover {
+  border-color: #409eff;
+}
+
+.avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.avatar-uploader-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #8c939d;
+}
+
+.avatar-uploader-icon {
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+
+.avatar-uploader-icon.is-loading {
+  animation: rotating 2s linear infinite;
+}
+
+.upload-text {
+  font-size: 14px;
+  text-align: center;
+  line-height: 1.4;
+}
+
+@keyframes rotating {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 </style>
 
@@ -482,6 +591,27 @@ onMounted(() => {
               <el-input v-model="batchForm.remark" placeholder="整体备注信息" style="flex: 1; width: 100%;" />
             </div>
           </div>
+        </el-form-item>
+        
+        <!-- 图片上传 -->
+        <el-form-item label="单据">
+          <div class="avatar-uploader" @click="handleImageUpload">
+            <img v-if="batchForm.image" :src="batchForm.image" class="avatar" />
+            <div v-else class="avatar-uploader-placeholder">
+              <el-icon v-if="!uploading" class="avatar-uploader-icon"><Plus /></el-icon>
+              <el-icon v-else class="avatar-uploader-icon is-loading"><Loading /></el-icon>
+              <div class="upload-text">
+                {{ uploading ? `上传中... ${uploadProgress}%` : '请选择相关图片，支持 jpg、png 格式' }}
+              </div>
+            </div>
+          </div>
+          <input 
+            ref="fileInput" 
+            type="file" 
+            accept="image/jpeg,image/jpg,image/png" 
+            style="display: none" 
+            @change="onFileChange"
+          />
         </el-form-item>
         
         <el-form-item>

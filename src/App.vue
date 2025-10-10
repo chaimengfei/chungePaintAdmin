@@ -24,6 +24,7 @@
           <el-menu-item index="/stock/inbound/list">入库列表</el-menu-item>
           <el-menu-item index="/stock/outbound">出库-新增</el-menu-item>
           <el-menu-item index="/stock/outbound/list">出库-列表</el-menu-item>
+          <el-menu-item index="/stock/items/list">库存操作日志</el-menu-item>
         </el-sub-menu>
         <el-sub-menu index="user">
           <template #title>

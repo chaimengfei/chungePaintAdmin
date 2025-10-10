@@ -8,6 +8,7 @@ import StockInbound from '../views/stock_inbound.vue'
 import StockInboundList from '../views/stock_inbound_list.vue'
 import StockOutbound from '../views/stock_outbound.vue'
 import StockOutboundList from '../views/stock_outbound_list.vue'
+import StockItemsList from '../views/stock_items_list.vue'
 import UserList from '../views/user_list.vue'
 import UserEdit from '../views/user_edit.vue'
 import UserDetail from '../views/user_detail.vue'
@@ -25,6 +26,7 @@ const routes = [
   { path: '/category', component: CategoryList },
   { path: '/stock/outbound', component: StockOutbound, meta: { title: '出库-新增' } },
   { path: '/stock/outbound/list', component: StockOutboundList, meta: { title: '出库-列表' } },
+  { path: '/stock/items/list', component: StockItemsList, meta: { title: '库存操作日志' } },
   { path: '/stock/inbound', component: StockInbound },
   { path: '/stock/inbound/list', component: StockInboundList },
   { path: '/user/list', component: UserList },

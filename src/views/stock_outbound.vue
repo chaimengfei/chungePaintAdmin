@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { QuestionFilled, Plus, Loading } from '@element-plus/icons-vue'
 import request from '../api/request'
-import { batchOutboundStock, getProductList } from '../api/stock'
+import { batchOutboundStock, getProductList, DraftManager } from '../api/stock'
 import { uploadToOSS, validateFile } from '../utils/ossUpload'
 
 const router = useRouter()
@@ -43,6 +43,12 @@ const selectedShopId = ref(null)
 const fileInput = ref()
 const uploading = ref(false)
 const uploadProgress = ref(0)
+
+// 草稿相关
+const isDraft = ref(false)
+const hasDraft = ref(false) // 是否有草稿存在
+const showDraftAlert = ref(false) // 是否显示草稿提示
+const operatorId = ref(1001) // 当前操作员ID，实际应该从用户信息获取
 
 function loadGoodsOptions() {
   getProductList({ page: 1, page_size: 100 }).then(res => {
@@ -258,6 +264,133 @@ async function uploadFile(file) {
   }
 }
 
+// 检查草稿是否存在
+function checkDraft() {
+  hasDraft.value = DraftManager.hasDraft(operatorId.value)
+  if (hasDraft.value) {
+    showDraftAlert.value = true
+  }
+}
+
+// 加载草稿数据
+function loadDraft() {
+  const draft = DraftManager.getDraft(operatorId.value)
+  if (draft) {
+    isDraft.value = true
+    showDraftAlert.value = false
+    
+    // 加载草稿数据到表单
+    batchForm.customer = draft.user_name || null
+    batchForm.operate_time = draft.operate_time ? draft.operate_time.replace('T', ' ').slice(0, 19) : new Date().toLocaleString('sv-SE').slice(0, 19)
+    batchForm.remark = draft.remark || ''
+    batchForm.shop_id = draft.shop_id
+    batchForm.image = draft.invoice_url || ''
+    
+    // 加载商品列表
+    if (draft.items && draft.items.length > 0) {
+      batchForm.items = draft.items.map(item => ({
+        product_id: item.product_id,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        default_price: item.unit_price, // 使用保存的价格作为默认价格
+        total_price: item.total_price,
+        product_name: item.product_name || '',
+        unit: item.unit || '',
+        specification: item.specification || '',
+        remark: item.remark || ''
+      }))
+    }
+    
+    ElMessage.success('已加载草稿数据')
+  }
+}
+
+// 保存草稿
+function saveDraft() {
+  const validItems = batchForm.items.filter(item => 
+    item.product_id && item.quantity && item.unit_price && item.quantity > 0
+  )
+  
+  // 获取选中客户的user_id
+  const selectedCustomer = customerOptions.value.find(customer => customer.value === batchForm.customer)
+  
+  const data = {
+    items: validItems.map(item => ({
+      product_id: item.product_id,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      total_price: item.total_price,
+      product_name: item.product_name,
+      unit: item.unit,
+      specification: item.specification,
+      remark: item.remark || ''
+    })),
+    total_amount: totalAmount.value,
+    user_name: batchForm.customer,
+    user_id: selectedCustomer ? selectedCustomer.user_id : null,
+    operate_time: batchForm.operate_time.replace(' ', 'T') + '+08:00',
+    operator: "我是操作人",
+    operator_id: operatorId.value,
+    remark: batchForm.remark,
+    shop_id: batchForm.shop_id,
+    invoice_url: batchForm.image,
+    status: 'draft'
+  }
+  
+  const success = DraftManager.saveDraft(operatorId.value, data)
+  if (success) {
+    isDraft.value = true
+    ElMessage.success('草稿已保存')
+  } else {
+    ElMessage.error('保存草稿失败')
+  }
+}
+
+// 删除草稿
+function deleteDraft() {
+  const success = DraftManager.deleteDraft(operatorId.value)
+  if (success) {
+    isDraft.value = false
+    hasDraft.value = false
+    showDraftAlert.value = false
+    // 重置表单
+    resetForm()
+    ElMessage.success('草稿已删除')
+  } else {
+    ElMessage.error('删除草稿失败')
+  }
+}
+
+// 继续编辑草稿
+function continueDraft() {
+  loadDraft()
+}
+
+// 忽略草稿，重新开始
+function ignoreDraft() {
+  showDraftAlert.value = false
+  // 保持表单为初始状态，不加载草稿
+}
+
+// 重置表单
+function resetForm() {
+  batchForm.customer = null
+  batchForm.operate_time = new Date().toLocaleString('sv-SE').slice(0, 19)
+  batchForm.remark = ''
+  batchForm.image = ''
+  batchForm.items = [{ 
+    product_id: '', 
+    quantity: '', 
+    unit_price: 0,
+    default_price: 0,
+    total_price: 0,
+    product_name: '',
+    unit: '',
+    specification: '',
+    remark: ''
+  }]
+}
+
 function submitBatchForm() {
   if (!batchForm.customer) {
     ElMessage.error('请选择客户')
@@ -291,7 +424,7 @@ function submitBatchForm() {
     user_id: selectedCustomer ? selectedCustomer.user_id : null,
     operate_time: batchForm.operate_time.replace(' ', 'T') + '+08:00', // 保持本地时间，添加时区信息
     operator: "我是操作人",
-    operator_id: 1001,
+    operator_id: operatorId.value,
     remark: batchForm.remark,
     shop_id: batchForm.shop_id,
     invoice_url: batchForm.image  // 添加单据URL
@@ -299,6 +432,10 @@ function submitBatchForm() {
   
   batchOutboundStock(data).then(() => {
     ElMessage.success('出库成功')
+    // 如果是从草稿提交的，删除草稿
+    if (isDraft.value) {
+      DraftManager.deleteDraft(operatorId.value)
+    }
     router.push('/stock/outbound/list')
   }).catch(() => {
     ElMessage.error('出库失败')
@@ -309,6 +446,9 @@ onMounted(() => {
   loadUserInfo()
   loadGoodsOptions()
   loadCustomerOptions()
+  
+  // 检查草稿是否存在
+  checkDraft()
   
   // 监听全局店铺切换事件
   window.addEventListener('shopChanged', (event) => {
@@ -441,8 +581,34 @@ onMounted(() => {
 
 <template>
   <div>
-    <div style="margin-bottom: 20px;">
-      <h1 style="font-size: 32px; font-weight: bold; color: #303133;">新增出库单</h1>
+    <!-- 草稿提示条 -->
+    <el-alert
+      v-if="showDraftAlert"
+      title="检测到草稿"
+      type="warning"
+      :closable="false"
+      style="margin-bottom: 20px;"
+    >
+      <template #default>
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <span>当前存在一条草稿，你可以选择继续上次的编辑或者删除草稿重新操作</span>
+          <div style="display: flex; gap: 12px; margin-left: 20px;">
+            <el-button type="primary" size="small" @click="continueDraft">继续编辑</el-button>
+            <el-button type="danger" size="small" @click="deleteDraft">删除草稿</el-button>
+            <el-button size="small" @click="ignoreDraft">忽略</el-button>
+          </div>
+        </div>
+      </template>
+    </el-alert>
+
+    <div style="margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+      <h1 style="font-size: 32px; font-weight: bold; color: #303133;">
+        {{ isDraft ? '编辑草稿出库单' : '新增出库单' }}
+      </h1>
+      <div v-if="isDraft" style="display: flex; gap: 12px;">
+        <el-tag type="warning" size="large">草稿状态</el-tag>
+        <el-button type="danger" size="small" @click="deleteDraft">删除草稿</el-button>
+      </div>
     </div>
     
     <el-card>
@@ -615,7 +781,14 @@ onMounted(() => {
         </el-form-item>
         
         <el-form-item>
-          <el-button type="primary" @click="submitBatchForm" size="large" style="font-size: 20px; padding: 15px 40px; font-weight: bold;">确认</el-button>
+          <div style="display: flex; gap: 16px; align-items: center;">
+            <el-button type="primary" @click="submitBatchForm" size="large" style="font-size: 20px; padding: 15px 40px; font-weight: bold;">
+              {{ isDraft ? '确认提交' : '确认出库' }}
+            </el-button>
+            <el-button type="warning" @click="saveDraft" size="large" style="font-size: 16px; padding: 12px 30px;">
+              {{ isDraft ? '更新草稿' : '保存草稿' }}
+            </el-button>
+          </div>
         </el-form-item>
       </el-form>
     </el-card>

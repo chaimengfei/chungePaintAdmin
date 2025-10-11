@@ -22,9 +22,9 @@
           </template>
           <el-menu-item index="/stock/inbound">入库-新增</el-menu-item>
           <el-menu-item index="/stock/inbound/list">入库列表</el-menu-item>
-          <el-menu-item index="/stock/outbound">出库-新增</el-menu-item>
+          <el-menu-item index="/stock/outbound" @click="handleOutboundNew">出库-新增</el-menu-item>
           <el-menu-item index="/stock/outbound/list">出库-列表</el-menu-item>
-          <el-menu-item index="/stock/items/list">库存操作日志</el-menu-item>
+          <el-menu-item index="/stock/items/list">库存明细</el-menu-item>
         </el-sub-menu>
         <el-sub-menu index="user">
           <template #title>
@@ -134,6 +134,12 @@ function handleShopChange(shopId) {
   selectedShopId.value = shopId
   // 触发全局事件，通知其他组件店铺已切换
   window.dispatchEvent(new CustomEvent('shopChanged', { detail: { shopId } }))
+}
+
+// 处理出库新增点击
+function handleOutboundNew() {
+  // 直接跳转到出库新增页面，页面内部会自动检查草稿
+  router.push('/stock/outbound')
 }
 
 // 退出登录

@@ -26,7 +26,7 @@ const routes = [
   { path: '/category', component: CategoryList },
   { path: '/stock/outbound', component: StockOutbound, meta: { title: '出库-新增' } },
   { path: '/stock/outbound/list', component: StockOutboundList, meta: { title: '出库-列表' } },
-  { path: '/stock/items/list', component: StockItemsList, meta: { title: '库存操作日志' } },
+  { path: '/stock/items/list', component: StockItemsList, meta: { title: '库存明细' } },
   { path: '/stock/inbound', component: StockInbound },
   { path: '/stock/inbound/list', component: StockInboundList },
   { path: '/user/list', component: UserList },

@@ -1,7 +1,7 @@
 <template>
   <div>
     <div style="margin-bottom: 20px;">
-      <h1 style="font-size: 32px; font-weight: bold; color: #303133;">库存操作日志</h1>
+      <h1 style="font-size: 32px; font-weight: bold; color: #303133;">库存明细</h1>
     </div>
     
     <!-- 筛选面板 -->
@@ -65,13 +65,6 @@
     <el-card>
       <el-table :data="stockItemsList" style="width: 100%" v-loading="loading" border>
         <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="operation_id" label="操作ID" width="100" />
-        <el-table-column prop="order_no" label="订单号" width="180">
-          <template #default="scope">
-            <span v-if="scope.row.order_no">{{ scope.row.order_no }}</span>
-            <span v-else style="color: #909399;">-</span>
-          </template>
-        </el-table-column>
         <el-table-column prop="product_name" label="商品名称" min-width="200">
           <template #default="scope">
             <div>
@@ -87,16 +80,6 @@
             </span>
           </template>
         </el-table-column>
-        <el-table-column prop="unit_price" label="单价" width="100">
-          <template #default="scope">
-            ¥{{ scope.row.unit_price?.toFixed(2) || '0.00' }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="total_price" label="总价" width="100">
-          <template #default="scope">
-            ¥{{ scope.row.total_price?.toFixed(2) || '0.00' }}
-          </template>
-        </el-table-column>
         <el-table-column label="库存变化" width="150">
           <template #default="scope">
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -108,9 +91,9 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="product_cost" label="成本" width="100">
+        <el-table-column prop="unit_profit" label="单件利润" width="100">
           <template #default="scope">
-            ¥{{ scope.row.product_cost?.toFixed(2) || '0.00' }}
+            ¥{{ scope.row.unit_profit?.toFixed(2) || '0.00' }}
           </template>
         </el-table-column>
         <el-table-column prop="profit" label="利润" width="100">
@@ -120,6 +103,13 @@
             </span>
           </template>
         </el-table-column>
+        <el-table-column prop="order_no" label="订单号" width="180">
+          <template #default="scope">
+            <span v-if="scope.row.order_no">{{ scope.row.order_no }}</span>
+            <span v-else style="color: #909399;">-</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="operation_id" label="操作ID" width="100" />
         <el-table-column prop="remark" label="备注" min-width="150">
           <template #default="scope">
             <span v-if="scope.row.remark">{{ scope.row.remark }}</span>

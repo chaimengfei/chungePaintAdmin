@@ -22,6 +22,19 @@ service.interceptors.request.use(
 service.interceptors.response.use(
   response => response.data,
   error => {
+    // 处理401未授权错误
+    if (error.response && error.response.status === 401) {
+      // 清除本地存储的认证信息
+      localStorage.removeItem('token')
+      localStorage.removeItem('operator')
+      localStorage.removeItem('shop_info')
+      localStorage.removeItem('shop_list')
+      
+      // 跳转到登录页
+      window.location.href = '/login'
+      return Promise.reject(error)
+    }
+    
     // 统一处理 HTTP 错误状态码
     if (error.response && error.response.data) {
       const errorData = error.response.data

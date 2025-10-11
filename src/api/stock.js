@@ -53,4 +53,59 @@ export function getSupplierList() {
 // 获取库存操作日志列表
 export function getStockItemsList(params) {
   return request.get('/stock/items', { params })
+}
+
+// 前端草稿管理（使用localStorage，无需后端）
+export const DraftManager = {
+  // 获取草稿存储key
+  getDraftKey(operatorId) {
+    return `outbound_draft_${operatorId}`
+  },
+  
+  // 获取草稿数据
+  getDraft(operatorId) {
+    try {
+      const key = this.getDraftKey(operatorId)
+      const draft = localStorage.getItem(key)
+      return draft ? JSON.parse(draft) : null
+    } catch (error) {
+      console.error('获取草稿失败:', error)
+      return null
+    }
+  },
+  
+  // 保存草稿数据
+  saveDraft(operatorId, data) {
+    try {
+      const key = this.getDraftKey(operatorId)
+      const draftData = {
+        ...data,
+        operator_id: operatorId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+      localStorage.setItem(key, JSON.stringify(draftData))
+      return true
+    } catch (error) {
+      console.error('保存草稿失败:', error)
+      return false
+    }
+  },
+  
+  // 删除草稿数据
+  deleteDraft(operatorId) {
+    try {
+      const key = this.getDraftKey(operatorId)
+      localStorage.removeItem(key)
+      return true
+    } catch (error) {
+      console.error('删除草稿失败:', error)
+      return false
+    }
+  },
+  
+  // 检查是否有草稿
+  hasDraft(operatorId) {
+    return this.getDraft(operatorId) !== null
+  }
 } 

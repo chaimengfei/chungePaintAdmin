@@ -85,7 +85,7 @@
               <el-input-number 
                 v-model="form.product_cost" 
                 :min="0" 
-                :step="1" 
+                :step="1"
                 placeholder="请输入进价"
                 style="width: 100%;"
                 @change="calculateTotalCost"
@@ -98,7 +98,7 @@
               <el-input-number 
                 v-model="form.shipping_cost" 
                 :min="0" 
-                :step="1" 
+                :step="1"
                 placeholder="请输入运费"
                 style="width: 100%;"
                 @change="calculateTotalCost"
@@ -117,7 +117,7 @@
               <el-input-number 
                 v-model="form.cost" 
                 :min="0" 
-                :step="1" 
+                :step="1"
                 placeholder="自动计算"
                 style="width: 100%;"
                 readonly
@@ -134,7 +134,8 @@
               <el-input-number 
                 v-model="form.seller_price" 
                 :min="0" 
-                :step="1" 
+                :step="0.01"
+                :precision="2"
                 placeholder="请输入售价"
                 style="width: 100%;"
               />
@@ -378,7 +379,7 @@ function calculateTotalCost() {
     const productCost = Number(form.product_cost) || 0
     const shippingCost = Number(form.shipping_cost) || 0
     const totalCost = productCost + shippingCost
-    form.cost = Math.round(totalCost)
+    form.cost = Math.round(totalCost) // 返回整数
   })
 }
 

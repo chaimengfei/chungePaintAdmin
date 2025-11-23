@@ -2,7 +2,7 @@ import axios from 'axios'
 
 const service = axios.create({
   baseURL: '/admin', // 统一添加admin前缀
-  timeout: 5000
+  timeout: 10000
 })
 
 // 请求拦截器 - 添加Authorization头

@@ -9,6 +9,7 @@
   "dependencies": {
     "ali-oss": "^6.23.0",
     "axios": "^1.6.0",
+    "echarts": "^6.0.0",
     "element-plus": "^2.4.4",
     "vue": "^3.4.0",
     "vue-router": "^4.2.5"

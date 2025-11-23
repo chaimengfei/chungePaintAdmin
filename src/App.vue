@@ -8,6 +8,9 @@
   <el-container v-else style="height: 100vh">
     <el-aside width="200px" style="background:#f2f2f2">
       <el-menu router :default-active="$route.path" :collapse="false" style="border-right: none;">
+        <el-menu-item index="/dashboard">
+          <span style="font-weight: 500;">首页大盘</span>
+        </el-menu-item>
         <el-sub-menu index="goods">
           <template #title>
             <span style="font-weight: 500;">商品管理</span>

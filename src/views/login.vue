@@ -100,6 +100,9 @@ function handleLogin() {
           localStorage.setItem('shop_info', JSON.stringify(res.data.shop_info))
           localStorage.setItem('shop_list', JSON.stringify(res.data.shop_list))
           
+          // 触发自定义事件，通知 App.vue 更新用户信息
+          window.dispatchEvent(new CustomEvent('userInfoUpdated'))
+          
           ElMessage.success('登录成功')
           
           // 跳转到首页

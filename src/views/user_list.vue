@@ -197,6 +197,89 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- 编辑用户弹窗 -->
+    <el-dialog
+      v-model="editDialogVisible"
+      title="编辑用户"
+      width="600px"
+      :close-on-click-modal="false"
+    >
+      <el-form
+        ref="editFormRef"
+        :model="editForm"
+        :rules="userFormRules"
+        label-width="100px"
+      >
+        <el-form-item label="用户名" prop="admin_display_name">
+          <el-input
+            v-model="editForm.admin_display_name"
+            placeholder="请输入用户名"
+            clearable
+          />
+        </el-form-item>
+        
+        <el-form-item label="手机号" prop="mobile_phone">
+          <el-input
+            v-model="editForm.mobile_phone"
+            placeholder="请输入手机号"
+            clearable
+            maxlength="11"
+          />
+        </el-form-item>
+        
+        <el-form-item label="所属店铺" prop="shop_id">
+          <!-- 普通管理员显示固定店铺 -->
+          <el-input 
+            v-if="!isRoot && shopInfo" 
+            :value="shopInfo.name" 
+            disabled 
+            style="width: 100%;"
+          />
+          <!-- Root用户显示店铺选择器 -->
+          <el-select 
+            v-else-if="isRoot && shopList.length > 0"
+            v-model="editForm.shop_id" 
+            placeholder="请选择店铺" 
+            style="width: 100%;"
+          >
+            <el-option
+              v-for="shop in shopList"
+              :key="shop.id"
+              :label="shop.name"
+              :value="shop.id"
+            />
+          </el-select>
+          <span v-else style="color: #909399;">暂无店铺信息</span>
+        </el-form-item>
+        
+        <el-form-item label="状态" prop="is_enable">
+          <el-radio-group v-model="editForm.is_enable">
+            <el-radio :label="1">正常</el-radio>
+            <el-radio :label="0">禁用</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        
+        <el-form-item label="备注" prop="remark">
+          <el-input
+            v-model="editForm.remark"
+            type="textarea"
+            placeholder="请输入备注信息"
+            :rows="3"
+            clearable
+          />
+        </el-form-item>
+      </el-form>
+      
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="editDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="submitEditForm" :loading="editSubmitting">
+            确定
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -205,7 +288,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
-import { getUserList, deleteUser as deleteUserApi, addUser } from '../api/user'
+import { getUserList, deleteUser as deleteUserApi, addUser, getUserDetail, editUser as editUserApi } from '../api/user'
 
 const router = useRouter()
 
@@ -279,6 +362,19 @@ const addForm = reactive({
   remark: ''
 })
 
+// 编辑用户相关
+const editDialogVisible = ref(false)
+const editSubmitting = ref(false)
+const editFormRef = ref()
+const editForm = reactive({
+  id: null,
+  admin_display_name: '',
+  mobile_phone: '',
+  shop_id: null,
+  is_enable: 1,
+  remark: ''
+})
+
 // 表单验证规则
 const userFormRules = {
   admin_display_name: [
@@ -288,6 +384,9 @@ const userFormRules = {
   mobile_phone: [
     { required: true, message: '请输入手机号', trigger: 'blur' },
     { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号格式', trigger: 'blur' }
+  ],
+  is_enable: [
+    { required: true, message: '请选择用户状态', trigger: 'change' }
   ]
 }
 
@@ -397,9 +496,75 @@ function viewUserAddress(user) {
 
 // 编辑用户
 function editUser(user) {
-  router.push({
-    path: '/user/edit',
-    query: { id: user.id }
+  editDialogVisible.value = true
+  
+  // 先加载用户详情
+  loading.value = true
+  getUserDetail(user.id).then(res => {
+    if (res.code === 0) {
+      const userData = res.data
+      
+      // 设置店铺ID
+      let shopId = null
+      if (isRoot.value && selectedShopId.value) {
+        shopId = selectedShopId.value
+      } else if (!isRoot.value && shopInfo.value) {
+        shopId = shopInfo.value.id
+      } else if (userData.shop_id) {
+        shopId = userData.shop_id
+      }
+      
+      Object.assign(editForm, {
+        id: userData.id,
+        admin_display_name: userData.admin_display_name || '',
+        mobile_phone: userData.mobile_phone || '',
+        shop_id: shopId,
+        is_enable: userData.is_enable,
+        remark: userData.remark || ''
+      })
+    } else {
+      ElMessage.error(res.message || '获取用户详情失败')
+      editDialogVisible.value = false
+    }
+  }).catch((error) => {
+    console.log('获取用户详情错误:', error)
+    ElMessage.error('网络错误，请稍后重试')
+    editDialogVisible.value = false
+  }).finally(() => {
+    loading.value = false
+  })
+}
+
+// 提交编辑表单
+function submitEditForm() {
+  editFormRef.value.validate((valid) => {
+    if (valid) {
+      editSubmitting.value = true
+      
+      editUserApi({
+        id: editForm.id,
+        admin_display_name: editForm.admin_display_name,
+        mobile_phone: editForm.mobile_phone,
+        shop_id: editForm.shop_id,
+        is_enable: editForm.is_enable,
+        remark: editForm.remark
+      }).then(res => {
+        if (res.code === 0) {
+          ElMessage.success('编辑用户成功')
+          editDialogVisible.value = false
+          loadUserList()
+        } else {
+          ElMessage.error(res.message || '编辑用户失败')
+        }
+      }).catch((error) => {
+        console.log('编辑用户错误:', error)
+        ElMessage.error('网络错误，请稍后重试')
+      }).finally(() => {
+        editSubmitting.value = false
+      })
+    } else {
+      ElMessage.error('请检查表单信息')
+    }
   })
 }
 

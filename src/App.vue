@@ -79,7 +79,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
@@ -111,6 +111,9 @@ function loadUserInfo() {
     } catch (error) {
       console.error('解析操作员信息失败:', error)
     }
+  } else {
+    // 如果没有操作员信息，重置为null
+    operatorInfo.value = null
   }
   if (shop && shop !== 'null') {
     try {
@@ -118,6 +121,8 @@ function loadUserInfo() {
     } catch (error) {
       console.error('解析店铺信息失败:', error)
     }
+  } else {
+    shopInfo.value = null
   }
   if (shops && shops !== 'null') {
     try {
@@ -129,6 +134,8 @@ function loadUserInfo() {
     } catch (error) {
       console.error('解析店铺列表失败:', error)
     }
+  } else {
+    shopList.value = []
   }
 }
 
@@ -171,8 +178,30 @@ function handleLogout() {
   })
 }
 
+// 监听路由变化，当从登录页跳转出来时重新加载用户信息
+watch(() => route.path, (newPath, oldPath) => {
+  // 如果从登录页跳转到其他页面，重新加载用户信息
+  if (oldPath === '/login' && newPath !== '/login') {
+    loadUserInfo()
+  }
+})
+
 onMounted(() => {
+  // 初始加载用户信息
   loadUserInfo()
+  
+  // 监听 localStorage 变化，当用户信息更新时重新加载
+  // 这可以处理登录成功后用户信息被存储的情况
+  const handleStorageChange = (e) => {
+    if (e.key === 'operator' || e.key === 'shop_info' || e.key === 'shop_list') {
+      loadUserInfo()
+    }
+  }
+  window.addEventListener('storage', handleStorageChange)
+  
+  // 由于 storage 事件只在其他标签页触发，我们需要使用自定义事件
+  // 在登录成功后，可以触发这个事件来更新用户信息
+  window.addEventListener('userInfoUpdated', loadUserInfo)
 })
 </script>
 

@@ -14,7 +14,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/admin': {
-        target: 'https://chunge-paint.loca.lt', // 你的 Golang 后端地址
+        target: 'https://paint.maocai.shop', // 你的 Golang 后端地址
         changeOrigin: true
       }
     }

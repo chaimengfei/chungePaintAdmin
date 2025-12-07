@@ -231,49 +231,44 @@ const employSummary = computed(() => {
   const stats = dashboardData.value.employ_stats || []
   const workers = dashboardData.value.worker_top10 || []
   
-  // 统计工厂金额
+  // 统计工厂金额（从employ_stats中获取）
   let factoryAmount = 0
-  let factoryCount = 0
   stats.forEach(item => {
     if (item.employ === 'factory') {
       factoryAmount += parseFloat(item.order_amount || 0)
-      factoryCount += parseInt(item.order_count || 0)
     }
   })
   
-  // 统计工人包活和不包活
+  // 统计工人包活和不包活（从worker_top10中获取）
+  // master_proj === 1 表示包活，master_proj === 0 表示不包活
   let workerPackageAmount = 0  // 包活金额
   let workerNoPackageAmount = 0  // 不包活金额
-  let workerPackageCount = 0
-  let workerNoPackageCount = 0
   
   workers.forEach(item => {
     const amount = parseFloat(item.order_amount || 0)
-    // 根据后端返回的字段判断是否包活，可能是 is_package, master_proj 等字段
-    const isPackage = item.is_package === 1 || item.master_proj === 1 || item.is_package === true
+    // master_proj === 1 表示包活
+    const isPackage = item.master_proj === 1
     if (isPackage) {
       workerPackageAmount += amount
-      workerPackageCount += 1
     } else {
       workerNoPackageAmount += amount
-      workerNoPackageCount += 1
     }
   })
   
   const summary = []
-  if (factoryAmount > 0 || factoryCount > 0) {
+  if (factoryAmount > 0) {
     summary.push({
       name: '工厂',
       amount: factoryAmount.toFixed(2)
     })
   }
-  if (workerPackageAmount > 0 || workerPackageCount > 0) {
+  if (workerPackageAmount > 0) {
     summary.push({
       name: '工人-包活',
       amount: workerPackageAmount.toFixed(2)
     })
   }
-  if (workerNoPackageAmount > 0 || workerNoPackageCount > 0) {
+  if (workerNoPackageAmount > 0) {
     summary.push({
       name: '工人-不包活',
       amount: workerNoPackageAmount.toFixed(2)
@@ -619,48 +614,44 @@ function renderEmployChart() {
   const stats = dashboardData.value.employ_stats || []
   const workers = dashboardData.value.worker_top10 || []
   
-  // 统计工厂
+  // 统计工厂（从employ_stats中获取）
   let factoryAmount = 0
-  let factoryCount = 0
   stats.forEach(item => {
     if (item.employ === 'factory') {
       factoryAmount += parseFloat(item.order_amount || 0)
-      factoryCount += parseInt(item.order_count || 0)
     }
   })
   
-  // 统计工人包活和不包活
+  // 统计工人包活和不包活（从worker_top10中获取）
+  // master_proj === 1 表示包活，master_proj === 0 表示不包活
   let workerPackageAmount = 0
   let workerNoPackageAmount = 0
-  let workerPackageCount = 0
-  let workerNoPackageCount = 0
   
   workers.forEach(item => {
     const amount = parseFloat(item.order_amount || 0)
-    const isPackage = item.is_package === 1 || item.master_proj === 1 || item.is_package === true
+    // master_proj === 1 表示包活
+    const isPackage = item.master_proj === 1
     if (isPackage) {
       workerPackageAmount += amount
-      workerPackageCount += 1
     } else {
       workerNoPackageAmount += amount
-      workerNoPackageCount += 1
     }
   })
   
   const pieData = []
-  if (factoryAmount > 0 || factoryCount > 0) {
+  if (factoryAmount > 0) {
     pieData.push({
       name: '工厂',
       value: factoryAmount
     })
   }
-  if (workerPackageAmount > 0 || workerPackageCount > 0) {
+  if (workerPackageAmount > 0) {
     pieData.push({
       name: '工人-包活',
       value: workerPackageAmount
     })
   }
-  if (workerNoPackageAmount > 0 || workerNoPackageCount > 0) {
+  if (workerNoPackageAmount > 0) {
     pieData.push({
       name: '工人-不包活',
       value: workerNoPackageAmount
@@ -755,12 +746,14 @@ function renderWorkerTop10Chart() {
   
   const names = top10.map(item => {
     const userName = item.user_name || '未知用户'
-    const isPackage = item.is_package === 1 || item.master_proj === 1 || item.is_package === true
+    // master_proj === 1 表示包活
+    const isPackage = item.master_proj === 1
     return `${userName}(${isPackage ? '包活' : '不包活'})`
   })
   const amounts = top10.map(item => parseFloat(item.order_amount || 0))
   const colors = top10.map(item => {
-    const isPackage = item.is_package === 1 || item.master_proj === 1 || item.is_package === true
+    // master_proj === 1 表示包活
+    const isPackage = item.master_proj === 1
     return isPackage ? '#E6A23C' : '#F56C6C'
   })
   
@@ -773,7 +766,8 @@ function renderWorkerTop10Chart() {
       formatter: function(params) {
         const param = params[0]
         const item = top10[param.dataIndex]
-        const isPackage = item.is_package === 1 || item.master_proj === 1 || item.is_package === true
+        // master_proj === 1 表示包活
+        const isPackage = item.master_proj === 1
         return param.name + '<br/>' +
                '是否包活: ' + (isPackage ? '是' : '否') + '<br/>' +
                '总金额: ¥' + param.value.toFixed(2)

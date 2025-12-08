@@ -238,17 +238,16 @@ function loadInboundList() {
   
   // 构建请求参数
   const params = {
-    types: 1,
     page: currentPage.value,
     page_size: pageSize.value
   }
   
   // 添加店铺ID参数
+  // Root用户可以选择店铺，普通管理员只能查看自己店铺（后端会自动处理）
   if (isRoot.value && selectedShopId.value) {
     params.shop_id = selectedShopId.value
-  } else if (!isRoot.value && shopInfo.value) {
-    params.shop_id = shopInfo.value.id
   }
+  // 普通管理员不需要传shop_id，后端会根据token自动识别
   
   // 添加时间范围参数
   if (startTime.value) {
@@ -258,7 +257,7 @@ function loadInboundList() {
     params.end_time = endTime.value
   }
   
-  request.get('/stock/operations', { params }).then(res => {
+  request.get('/order/operations', { params }).then(res => {
     if (res.code === 0) {
       inboundList.value = res.data.list || []
       total.value = res.data.total || 0

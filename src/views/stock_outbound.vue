@@ -2,10 +2,9 @@
 import { reactive, ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { QuestionFilled, Plus, Loading } from '@element-plus/icons-vue'
+import { QuestionFilled } from '@element-plus/icons-vue'
 import request from '../api/request'
 import { batchOutboundStock, getProductList, DraftManager } from '../api/stock'
-import { uploadToOSS, validateFile } from '../utils/ossUpload'
 
 const router = useRouter()
 
@@ -25,8 +24,7 @@ const batchForm = reactive({
   customer: null,
   operate_time: new Date().toLocaleString('sv-SE').slice(0, 19), // 默认当前本地日期时间
   remark: '',
-  shop_id: null,  // 店铺ID
-  image: ''  // 相关图片
+  shop_id: null  // 店铺ID
 })
 
 const goodsOptions = ref([])
@@ -39,16 +37,12 @@ const shopInfo = ref(null)
 const shopList = ref([])
 const selectedShopId = ref(null)
 
-// 图片上传相关
-const fileInput = ref()
-const uploading = ref(false)
-const uploadProgress = ref(0)
 
 // 草稿相关
 const isDraft = ref(false)
 const hasDraft = ref(false) // 是否有草稿存在
 const showDraftAlert = ref(false) // 是否显示草稿提示
-const operatorId = ref(1001) // 当前操作员ID，实际应该从用户信息获取
+const operatorInfo = ref(null) // 当前操作员信息
 
 function loadGoodsOptions() {
   getProductList({ page: 1, page_size: 100 }).then(res => {
@@ -98,8 +92,18 @@ function loadCustomerOptions() {
 
 // 加载用户权限信息
 function loadUserInfo() {
+  const operator = localStorage.getItem('operator')
   const shop = localStorage.getItem('shop_info')
   const shops = localStorage.getItem('shop_list')
+  
+  // 获取操作员信息
+  if (operator) {
+    try {
+      operatorInfo.value = JSON.parse(operator)
+    } catch (error) {
+      console.error('解析操作员信息失败:', error)
+    }
+  }
   
   // 判断是否为root用户
   isRoot.value = !shop || shop === 'null'
@@ -220,53 +224,10 @@ const totalAmount = computed(() => {
   return batchForm.items.reduce((sum, item) => sum + (item.total_price || 0), 0)
 })
 
-// 图片上传相关函数
-function handleImageUpload() {
-  if (uploading.value) return
-  fileInput.value.click()
-}
-
-function onFileChange(event) {
-  const file = event.target.files[0]
-  if (!file) return
-  
-  // 验证文件
-  const validation = validateFile(file)
-  if (!validation.valid) {
-    ElMessage.error(validation.message)
-    return
-  }
-  
-  // 开始上传
-  uploadFile(file)
-}
-
-async function uploadFile(file) {
-  try {
-    uploading.value = true
-    uploadProgress.value = 0
-    
-    const imageUrl = await uploadToOSS(file, (progress) => {
-      uploadProgress.value = progress
-    })
-    
-    batchForm.image = imageUrl
-    ElMessage.success('图片上传成功')
-    
-  } catch (error) {
-    console.error('上传失败:', error)
-    ElMessage.error(error.message || '图片上传失败')
-  } finally {
-    uploading.value = false
-    uploadProgress.value = 0
-    // 清空input值，允许重复选择同一文件
-    fileInput.value.value = ''
-  }
-}
-
 // 检查草稿是否存在
 function checkDraft() {
-  hasDraft.value = DraftManager.hasDraft(operatorId.value)
+  const operatorId = operatorInfo.value ? (operatorInfo.value.id || 0) : 0
+  hasDraft.value = DraftManager.hasDraft(operatorId)
   if (hasDraft.value) {
     showDraftAlert.value = true
   }
@@ -274,7 +235,8 @@ function checkDraft() {
 
 // 加载草稿数据
 function loadDraft() {
-  const draft = DraftManager.getDraft(operatorId.value)
+  const operatorId = operatorInfo.value ? (operatorInfo.value.id || 0) : 0
+  const draft = DraftManager.getDraft(operatorId)
   if (draft) {
     isDraft.value = true
     showDraftAlert.value = false
@@ -284,7 +246,6 @@ function loadDraft() {
     batchForm.operate_time = draft.operate_time ? draft.operate_time.replace('T', ' ').slice(0, 19) : new Date().toLocaleString('sv-SE').slice(0, 19)
     batchForm.remark = draft.remark || ''
     batchForm.shop_id = draft.shop_id
-    batchForm.image = draft.invoice_url || ''
     
     // 加载商品列表
     if (draft.items && draft.items.length > 0) {
@@ -329,15 +290,15 @@ function saveDraft() {
     user_name: batchForm.customer,
     user_id: selectedCustomer ? selectedCustomer.user_id : null,
     operate_time: batchForm.operate_time.replace(' ', 'T') + '+08:00',
-    operator: "我是操作人",
-    operator_id: operatorId.value,
+    operator: operatorInfo.value ? (operatorInfo.value.real_name || operatorInfo.value.name || '未知用户') : '未知用户',
+    operator_id: operatorInfo.value ? (operatorInfo.value.id || 0) : 0,
     remark: batchForm.remark,
     shop_id: batchForm.shop_id,
-    invoice_url: batchForm.image,
     status: 'draft'
   }
   
-  const success = DraftManager.saveDraft(operatorId.value, data)
+  const operatorId = operatorInfo.value ? (operatorInfo.value.id || 0) : 0
+  const success = DraftManager.saveDraft(operatorId, data)
   if (success) {
     isDraft.value = true
     ElMessage.success('草稿已保存')
@@ -348,7 +309,8 @@ function saveDraft() {
 
 // 删除草稿
 function deleteDraft() {
-  const success = DraftManager.deleteDraft(operatorId.value)
+  const operatorId = operatorInfo.value ? (operatorInfo.value.id || 0) : 0
+  const success = DraftManager.deleteDraft(operatorId)
   if (success) {
     isDraft.value = false
     hasDraft.value = false
@@ -377,7 +339,6 @@ function resetForm() {
   batchForm.customer = null
   batchForm.operate_time = new Date().toLocaleString('sv-SE').slice(0, 19)
   batchForm.remark = ''
-  batchForm.image = ''
   batchForm.items = [{ 
     product_id: '', 
     quantity: '', 
@@ -423,18 +384,18 @@ function submitBatchForm() {
     user_name: batchForm.customer,
     user_id: selectedCustomer ? selectedCustomer.user_id : null,
     operate_time: batchForm.operate_time.replace(' ', 'T') + '+08:00', // 保持本地时间，添加时区信息
-    operator: "我是操作人",
-    operator_id: operatorId.value,
+    operator: operatorInfo.value ? (operatorInfo.value.real_name || operatorInfo.value.name || '未知用户') : '未知用户',
+    operator_id: operatorInfo.value ? (operatorInfo.value.id || 0) : 0,
     remark: batchForm.remark,
-    shop_id: batchForm.shop_id,
-    invoice_url: batchForm.image  // 添加单据URL
+    shop_id: batchForm.shop_id
   }
   
   batchOutboundStock(data).then(() => {
     ElMessage.success('出库成功')
     // 如果是从草稿提交的，删除草稿
     if (isDraft.value) {
-      DraftManager.deleteDraft(operatorId.value)
+      const operatorId = operatorInfo.value ? (operatorInfo.value.id || 0) : 0
+      DraftManager.deleteDraft(operatorId)
     }
     router.push('/stock/outbound/list')
   }).catch(() => {
@@ -521,62 +482,6 @@ onMounted(() => {
   font-style: italic;
 }
 
-/* 图片上传样式 */
-.avatar-uploader {
-  width: 200px;
-  height: 200px;
-  border: 2px dashed #d9d9d9;
-  border-radius: 4px;
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-  transition: border-color 0.3s;
-}
-
-.avatar-uploader:hover {
-  border-color: #409eff;
-}
-
-.avatar {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.avatar-uploader-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: #8c939d;
-}
-
-.avatar-uploader-icon {
-  font-size: 28px;
-  margin-bottom: 8px;
-}
-
-.avatar-uploader-icon.is-loading {
-  animation: rotating 2s linear infinite;
-}
-
-.upload-text {
-  font-size: 14px;
-  text-align: center;
-  line-height: 1.4;
-}
-
-@keyframes rotating {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
 </style>
 
 <template>
@@ -757,27 +662,6 @@ onMounted(() => {
               <el-input v-model="batchForm.remark" placeholder="整体备注信息" style="flex: 1; width: 100%;" />
             </div>
           </div>
-        </el-form-item>
-        
-        <!-- 图片上传 -->
-        <el-form-item label="单据">
-          <div class="avatar-uploader" @click="handleImageUpload">
-            <img v-if="batchForm.image" :src="batchForm.image" class="avatar" />
-            <div v-else class="avatar-uploader-placeholder">
-              <el-icon v-if="!uploading" class="avatar-uploader-icon"><Plus /></el-icon>
-              <el-icon v-else class="avatar-uploader-icon is-loading"><Loading /></el-icon>
-              <div class="upload-text">
-                {{ uploading ? `上传中... ${uploadProgress}%` : '请选择相关图片，支持 jpg、png 格式' }}
-              </div>
-            </div>
-          </div>
-          <input 
-            ref="fileInput" 
-            type="file" 
-            accept="image/jpeg,image/jpg,image/png" 
-            style="display: none" 
-            @change="onFileChange"
-          />
         </el-form-item>
         
         <el-form-item>

@@ -33,6 +33,19 @@
             style="width: 150px;"
           />
         </div>
+
+        <!-- 订单类型筛选 -->
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="color: #606266; white-space: nowrap;">订单类型：</span>
+          <el-select
+            v-model="orderType"
+            placeholder="选择订单类型"
+            style="width: 150px;"
+            @change="handleOrderTypeChange"
+          >
+            <el-option v-for="opt in orderTypeOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+          </el-select>
+        </div>
         
         <!-- 时间范围筛选 -->
         <div style="display: flex; align-items: center; gap: 8px;">
@@ -61,8 +74,9 @@
     
     <el-card>
       <el-table :data="outboundList" style="width: 100%" v-loading="loading" border>
-        <el-table-column prop="operation_no" label="出库单号" width="200" />
+        <el-table-column prop="order_no" label="单号" width="200" />
         <el-table-column prop="user_name" label="客户" width="120" />
+        <el-table-column prop="operator_name" label="操作人" width="120" />
         <el-table-column label="出库类型" width="100">
           <template #default="scope">
             <el-tag :type="scope.row.outbound_type === 1 ? 'success' : 'primary'">
@@ -87,15 +101,22 @@
             </span>
           </template>
         </el-table-column>
-        <el-table-column prop="payment_finish_status" label="支付状态" width="150">
+        <el-table-column prop="payment_status" label="支付状态" width="150">
           <template #default="scope">
-            <el-tooltip 
-              v-if="scope.row.payment_finish_status === 3 && scope.row.payment_finish_time" 
-              :content="`支付时间: ${formatDateTime(scope.row.payment_finish_time)}`" 
-              placement="top"
-            >
-              <el-tag type="success">支付完成</el-tag>
-            </el-tooltip>
+            <div v-if="scope.row.payment_status === 3" style="display: flex; align-items: center; gap: 4px;">
+              <el-tag type="success">支付成功</el-tag>
+              <el-tooltip 
+                :content="getPaymentTypeText(scope.row.payment_type)" 
+                placement="top"
+              >
+                <el-icon style="cursor: pointer; color: #909399; font-size: 14px;">
+                  <QuestionFilled />
+                </el-icon>
+              </el-tooltip>
+            </div>
+            <div v-else-if="scope.row.payment_status === 2" style="display: flex; align-items: center; gap: 8px;">
+              <el-tag type="info">支付中</el-tag>
+            </div>
             <div v-else style="display: flex; align-items: center; gap: 8px;">
               <el-tag type="warning">未支付</el-tag>
               <el-button 
@@ -109,7 +130,7 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="created_at" label="出库时间" width="180">
+        <el-table-column prop="created_at" label="时间" width="180">
           <template #default="scope">
             {{ formatDateTime(scope.row.created_at) }}
           </template>
@@ -132,7 +153,6 @@
             <div v-else style="color: #909399; font-size: 12px;">暂无商品明细</div>
           </template>
         </el-table-column>
-        <el-table-column prop="operator" label="操作人" width="120" />
         <el-table-column label="单据" width="120">
           <template #default="scope">
             <div v-if="scope.row.invoice_url" class="invoice-image-container">
@@ -172,6 +192,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { QuestionFilled } from '@element-plus/icons-vue'
 import request from '../api/request'
 
 const outboundList = ref([])
@@ -179,12 +200,20 @@ const loading = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
+const orderType = ref(1) // 0-全部,1-出库,2-入库,3-退货，默认出库
+const orderTypeOptions = [
+  { label: '全部', value: 0 },
+  { label: '出库', value: 1 },
+  { label: '入库', value: 2 },
+  { label: '退货', value: 3 },
+]
 
 // 用户权限相关
 const isRoot = ref(false)
 const shopInfo = ref(null)
 const shopList = ref([])
 const selectedShopId = ref(null)
+const operatorInfo = ref(null) // 当前操作员信息
 
 // 时间范围筛选
 const dateRange = ref([])
@@ -208,8 +237,18 @@ function initDefaultDateRange() {
 
 // 加载用户权限信息
 function loadUserInfo() {
+  const operator = localStorage.getItem('operator')
   const shop = localStorage.getItem('shop_info')
   const shops = localStorage.getItem('shop_list')
+  
+  // 获取操作员信息
+  if (operator) {
+    try {
+      operatorInfo.value = JSON.parse(operator)
+    } catch (error) {
+      console.error('解析操作员信息失败:', error)
+    }
+  }
   
   // 判断是否为root用户
   isRoot.value = !shop || shop === 'null'
@@ -263,6 +302,12 @@ function handleDateRangeChange(value) {
   }
 }
 
+// 订单类型变化
+function handleOrderTypeChange() {
+  currentPage.value = 1
+  loadOutboundList()
+}
+
 // 查询按钮处理
 function handleSearch() {
   currentPage.value = 1 // 重置到第一页
@@ -275,6 +320,7 @@ function handleReset() {
   startTime.value = ''
   endTime.value = ''
   currentPage.value = 1
+  orderType.value = 1 // 重置为出库
   loadOutboundList()
 }
 
@@ -284,17 +330,18 @@ function loadOutboundList() {
   
   // 构建请求参数
   const params = {
-    types: 2,
     page: currentPage.value,
     page_size: pageSize.value
   }
+  // 订单类型
+  params.types = orderType.value
   
   // 添加店铺ID参数
+  // Root用户可以选择店铺，普通管理员只能查看自己店铺（后端会自动处理）
   if (isRoot.value && selectedShopId.value) {
     params.shop_id = selectedShopId.value
-  } else if (!isRoot.value && shopInfo.value) {
-    params.shop_id = shopInfo.value.id
   }
+  // 普通管理员不需要传shop_id，后端会根据token自动识别
   
   // 添加时间范围参数
   if (startTime.value) {
@@ -304,7 +351,7 @@ function loadOutboundList() {
     params.end_time = endTime.value
   }
   
-  request.get('/stock/operations', { params }).then(res => {
+  request.get('/order/operations', { params }).then(res => {
     if (res.code === 0) {
       outboundList.value = res.data.list || []
       total.value = res.data.total || 0
@@ -321,8 +368,14 @@ function loadOutboundList() {
 
 // 格式化日期时间
 function formatDateTime(dateTimeStr) {
-  if (!dateTimeStr) return ''
-  const date = new Date(dateTimeStr)
+  if (!dateTimeStr && dateTimeStr !== 0) return ''
+  // 支持时间戳（秒或毫秒）与 ISO 字符串
+  let ts = dateTimeStr
+  if (typeof ts === 'number') {
+    if (ts < 1e12) ts = ts * 1000 // 如果是秒级时间戳，转为毫秒
+    ts = Number(ts)
+  }
+  const date = new Date(ts)
   return date.toLocaleString('zh-CN', {
     year: 'numeric',
     month: '2-digit',
@@ -333,10 +386,30 @@ function formatDateTime(dateTimeStr) {
   })
 }
 
+// 获取支付类型文本
+function getPaymentTypeText(paymentType) {
+  const typeMap = {
+    1: '微信支付',
+    2: '余额支付',
+    3: '线下转账'
+  }
+  return typeMap[paymentType] || '未知支付方式'
+}
+
+// 获取支付状态文本
+function getPaymentStatusText(paymentStatus) {
+  const statusMap = {
+    1: '未支付',
+    2: '支付中',
+    3: '支付成功'
+  }
+  return statusMap[paymentStatus] || '未知状态'
+}
+
 // 设置支付状态
 function setPaymentStatus(row) {
   ElMessageBox.confirm(
-    `确认将出库单 ${row.operation_no} 设置为已支付状态吗？`,
+    `确认将出库单 ${row.order_no || row.operation_no || 'N/A'} 设置为已支付状态吗？`,
     '设置支付状态',
     {
       confirmButtonText: '确认',
@@ -347,17 +420,23 @@ function setPaymentStatus(row) {
     // 设置加载状态
     row.settingPayment = true
     
+    // 获取当前操作员信息
+    const operator = operatorInfo.value ? (operatorInfo.value.real_name || operatorInfo.value.name || '未知用户') : '未知用户'
+    const operatorId = operatorInfo.value ? (operatorInfo.value.id || 0) : 0
+    
     const data = {
       operation_id: row.id,
       payment_finish_status: 3,
-      operator: "我是操作人",
-      operator_id: 1001
+      operator: operator,
+      operator_id: operatorId
     }
     
     request.post('/stock/set/payment-status', data).then(res => {
       if (res.code === 0) {
         ElMessage.success('设置支付状态成功')
         // 更新本地数据
+        row.payment_status = 3
+        // 兼容旧字段
         row.payment_finish_status = 3
         row.payment_finish_time = new Date().toISOString()
       } else {
@@ -392,14 +471,14 @@ function viewDetail(row) {
     <div style="max-width: 800px;">
       <h3 style="margin-bottom: 20px; color: #303133;">出库单详情</h3>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
-        <div><strong>出库单号：</strong>${row.operation_no}</div>
+        <div><strong>单号：</strong>${row.order_no || row.operation_no || '无'}</div>
         <div><strong>客户：</strong>${row.user_name || '无'}</div>
-        <div><strong>操作人：</strong>${row.operator || '无'}</div>
+        <div><strong>操作人：</strong>${row.operator_name || row.operator || '无'}</div>
         <div><strong>出库时间：</strong>${formatDateTime(row.created_at)}</div>
         <div><strong>总数量：</strong><span style="color: #67c23a;">${row.total_quantity || 0}</span></div>
         <div><strong>总金额：</strong>¥${row.total_amount?.toFixed(2) || '0.00'}</div>
         <div><strong>总利润：</strong><span style="color: ${row.total_profit >= 0 ? '#67c23a' : '#f56c6c'}">¥${row.total_profit?.toFixed(2) || '0.00'}</span></div>
-        <div><strong>支付状态：</strong>${row.payment_finish_status === 3 ? '支付完成' : '未支付'}${row.payment_finish_status === 3 && row.payment_finish_time ? ` (${formatDateTime(row.payment_finish_time)})` : ''}</div>
+        <div><strong>支付状态：</strong>${getPaymentStatusText(row.payment_status)}${row.payment_status === 3 && row.payment_type ? ` (${getPaymentTypeText(row.payment_type)})` : ''}</div>
         <div><strong>出库类型：</strong>${row.outbound_type === 1 ? '小程序' : '后台'}</div>
       </div>
       ${row.remark ? `<div style="margin-bottom: 20px;"><strong>备注：</strong>${row.remark}</div>` : ''}
@@ -455,6 +534,7 @@ function handleCurrentChange(val) {
 onMounted(() => {
   loadUserInfo()
   initDefaultDateRange() // 初始化默认时间范围
+  orderType.value = 1 // 默认出库
   loadOutboundList()
   
   // 监听全局店铺切换事件

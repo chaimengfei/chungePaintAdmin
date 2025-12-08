@@ -2,11 +2,11 @@ import request from './request'
 
 // 批量操作
 export function batchInboundStock(data) {
-  return request.post('/stock/batch/inbound', data)
+  return request.post('/order/batch/inbound', data)
 }
 
 export function batchOutboundStock(data) {
-  return request.post('/stock/batch/outbound', data)
+  return request.post('/order/batch/outbound', data)
 }
 
 export function returnStock(data) {
@@ -15,8 +15,13 @@ export function returnStock(data) {
 
 
 // 商品管理
-export function getProductList(params) {
-  return request.get('/product/list', { params })
+export function getProductList(params = {}) {
+  // 设置默认 page_size 为 20
+  const requestParams = {
+    page_size: 20,
+    ...params
+  }
+  return request.get('/product/list', { params: requestParams })
 }
 
 export function getProductDetail(id) {

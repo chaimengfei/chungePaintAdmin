@@ -57,7 +57,7 @@ export function getSupplierList() {
 
 // 获取库存操作日志列表
 export function getStockItemsList(params) {
-  return request.get('/stock/items', { params })
+  return request.get('/order/items', { params })
 }
 
 // 前端草稿管理（使用localStorage，无需后端）

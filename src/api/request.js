@@ -2,7 +2,7 @@ import axios from 'axios'
 
 const service = axios.create({
   baseURL: '/admin', // 统一添加admin前缀
-  timeout: 10000
+  timeout: 30000 // 超时时间设置为60秒，适用于批量操作和复杂查询
 })
 
 // 请求拦截器 - 添加Authorization头

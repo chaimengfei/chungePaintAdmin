@@ -73,7 +73,24 @@
     </el-card>
     
     <el-card>
-      <el-table :data="outboundList" style="width: 100%" v-loading="loading" border>
+      <!-- 批量操作按钮 -->
+      <div v-if="selectedRows.length > 0" style="margin-bottom: 16px; padding: 12px; background-color: #f5f7fa; border-radius: 4px; display: flex; align-items: center; gap: 12px;">
+        <span style="color: #606266;">已选择 <strong style="color: #409eff;">{{ selectedRows.length }}</strong> 项</span>
+        <el-button type="primary" @click="batchSetPaymentStatus" :loading="batchSettingPayment">
+          批量设置支付
+        </el-button>
+        <el-button @click="clearSelection">取消选择</el-button>
+      </div>
+      
+      <el-table 
+        ref="tableRef"
+        :data="outboundList" 
+        style="width: 100%" 
+        v-loading="loading" 
+        border
+        @selection-change="handleSelectionChange"
+      >
+        <el-table-column type="selection" width="55" />
         <el-table-column prop="order_no" label="单号" width="200" />
         <el-table-column prop="user_name" label="客户" width="120" />
         <el-table-column prop="operator_name" label="操作人" width="120" />
@@ -201,6 +218,9 @@ const currentPage = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
 const orderType = ref(1) // 0-全部,1-出库,2-入库,3-退货，默认出库
+const selectedRows = ref([]) // 选中的行
+const batchSettingPayment = ref(false) // 批量设置支付加载状态
+const tableRef = ref(null) // 表格实例引用
 const orderTypeOptions = [
   { label: '全部', value: 0 },
   { label: '出库', value: 1 },
@@ -406,6 +426,88 @@ function getPaymentStatusText(paymentStatus) {
   return statusMap[paymentStatus] || '未知状态'
 }
 
+// 处理表格选择变化
+function handleSelectionChange(selection) {
+  selectedRows.value = selection
+}
+
+// 清空选择
+function clearSelection() {
+  selectedRows.value = []
+  // 使用表格实例清空选择
+  if (tableRef.value) {
+    tableRef.value.clearSelection()
+  }
+}
+
+// 批量设置支付状态
+function batchSetPaymentStatus() {
+  if (selectedRows.value.length === 0) {
+    ElMessage.warning('请先选择要设置支付的订单')
+    return
+  }
+  
+  // 过滤出未支付的订单
+  const unpaidOrders = selectedRows.value.filter(row => row.payment_status !== 3)
+  
+  if (unpaidOrders.length === 0) {
+    ElMessage.warning('所选订单均已支付，无需重复设置')
+    return
+  }
+  
+  ElMessageBox.confirm(
+    `确认将 ${unpaidOrders.length} 个订单设置为已支付状态吗？`,
+    '批量设置支付状态',
+    {
+      confirmButtonText: '确认',
+      cancelButtonText: '取消',
+      type: 'warning',
+    }
+  ).then(() => {
+    batchSettingPayment.value = true
+    
+    // 获取当前操作员信息
+    const operator = operatorInfo.value ? (operatorInfo.value.real_name || operatorInfo.value.name || '未知用户') : '未知用户'
+    const operatorId = operatorInfo.value ? (operatorInfo.value.id || 0) : 0
+    
+    // 构建订单ID数组
+    const orderIds = unpaidOrders.map(row => row.id)
+    
+    const data = {
+      order_ids: orderIds,
+      payment_finish_status: 3,
+      operator: operator,
+      operator_id: operatorId
+    }
+    
+    request.post('/order/set/payment-status', data).then(res => {
+      if (res.code === 0) {
+        ElMessage.success(`成功设置 ${unpaidOrders.length} 个订单的支付状态`)
+        // 更新本地数据
+        unpaidOrders.forEach(row => {
+          row.payment_status = 3
+          row.payment_finish_status = 3
+          row.payment_finish_time = new Date().toISOString()
+        })
+        // 清空选择
+        selectedRows.value = []
+        if (tableRef.value) {
+          tableRef.value.clearSelection()
+        }
+      } else {
+        ElMessage.error(res.message || '批量设置支付状态失败')
+      }
+    }).catch((error) => {
+      console.log('批量设置支付状态错误:', error)
+      ElMessage.error('网络错误，请稍后重试')
+    }).finally(() => {
+      batchSettingPayment.value = false
+    })
+  }).catch(() => {
+    // 用户取消操作
+  })
+}
+
 // 设置支付状态
 function setPaymentStatus(row) {
   ElMessageBox.confirm(
@@ -425,13 +527,13 @@ function setPaymentStatus(row) {
     const operatorId = operatorInfo.value ? (operatorInfo.value.id || 0) : 0
     
     const data = {
-      operation_id: row.id,
+      order_ids: [row.id],
       payment_finish_status: 3,
       operator: operator,
       operator_id: operatorId
     }
     
-    request.post('/stock/set/payment-status', data).then(res => {
+    request.post('/order/set/payment-status', data).then(res => {
       if (res.code === 0) {
         ElMessage.success('设置支付状态成功')
         // 更新本地数据

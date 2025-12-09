@@ -91,25 +91,18 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="unit_profit" label="单件利润" width="100">
-          <template #default="scope">
-            ¥{{ scope.row.unit_profit?.toFixed(2) || '0.00' }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="profit" label="利润" width="100">
-          <template #default="scope">
-            <span :style="{ color: scope.row.profit >= 0 ? '#67c23a' : '#f56c6c' }">
-              ¥{{ scope.row.profit?.toFixed(2) || '0.00' }}
-            </span>
-          </template>
-        </el-table-column>
         <el-table-column prop="order_no" label="订单号" width="180">
           <template #default="scope">
             <span v-if="scope.row.order_no">{{ scope.row.order_no }}</span>
             <span v-else style="color: #909399;">-</span>
           </template>
         </el-table-column>
-        <el-table-column prop="operation_id" label="操作ID" width="100" />
+        <el-table-column prop="operator_name" label="操作人" width="120">
+          <template #default="scope">
+            <span v-if="scope.row.operator_name">{{ scope.row.operator_name }}</span>
+            <span v-else style="color: #909399;">-</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="remark" label="备注" min-width="150">
           <template #default="scope">
             <span v-if="scope.row.remark">{{ scope.row.remark }}</span>

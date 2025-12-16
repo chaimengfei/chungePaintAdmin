@@ -224,7 +224,8 @@ function handleReset() {
 function loadProductList() {
   const params = {
     page: 1,
-    page_size: 1000 // 获取所有商品用于筛选
+    page_size: 1000, // 获取所有商品用于筛选
+    only_name: true
   }
   
   // 添加店铺ID参数

@@ -52,7 +52,7 @@ export function getInboundList(params) {
 
 // 获取供应商列表
 export function getSupplierList() {
-  return request.get('/stock/suppliers')
+  return request.get('/order/suppliers')
 }
 
 // 获取库存操作日志列表

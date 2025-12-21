@@ -55,6 +55,11 @@ export function getStockItemsList(params) {
   return request.get('/order/items', { params })
 }
 
+// 新增费用记录
+export function addFee(data) {
+  return request.post('/order/fee', data)
+}
+
 // 前端草稿管理（使用localStorage，无需后端）
 export const DraftManager = {
   // 获取草稿存储key

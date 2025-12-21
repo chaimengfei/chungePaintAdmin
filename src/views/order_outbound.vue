@@ -613,7 +613,15 @@ onMounted(() => {
               </div>
               <div class="form-group">
                 <label>数量</label>
-                <el-input v-model.number="item.quantity" type="number" min="1" placeholder="请输入数量" @input="calculateItemTotal(item)" />
+                <el-input-number
+                  v-model="item.quantity"
+                  :min="0.01"
+                  :precision="2"
+                  :step="0.1"
+                  placeholder="请输入数量"
+                  style="width: 100%;"
+                  @change="calculateItemTotal(item)"
+                />
               </div>
               <div class="form-group">
                 <label>金额</label>

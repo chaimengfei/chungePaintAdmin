@@ -1,9 +1,5 @@
 <template>
   <div>
-    <div style="margin-bottom: 20px;">
-      <h1 style="font-size: 32px; font-weight: bold; color: #303133;">出库-列表</h1>
-    </div>
-    
     <!-- 筛选面板 -->
     <el-card style="margin-bottom: 20px;">
       <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">

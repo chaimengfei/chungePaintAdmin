@@ -1,7 +1,7 @@
 <script setup>
 import { reactive, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getProductDetail, addProduct, updateProduct } from '../api/stock'
+import { getProductDetail, addProduct, updateProduct } from '../api/order'
 import { uploadGoodsImage } from '../api/oss'
 import { uploadToOSS, validateFile } from '../utils/ossUpload'
 import { ElMessage } from 'element-plus'

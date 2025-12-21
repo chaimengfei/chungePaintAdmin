@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getProductDetail } from '../api/stock'
+import { getProductDetail } from '../api/order'
 import { ElMessage } from 'element-plus'
 
 const route = useRoute()

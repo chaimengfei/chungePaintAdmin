@@ -21,13 +21,12 @@
         </el-sub-menu>
         <el-sub-menu index="stock">
           <template #title>
-            <span style="font-weight: 500;">库存管理</span>
+            <span style="font-weight: 500;">订单操作</span>
           </template>
-          <el-menu-item index="/stock/inbound">入库-新增</el-menu-item>
-          <el-menu-item index="/stock/inbound/list">入库列表</el-menu-item>
-          <el-menu-item index="/stock/outbound" @click="handleOutboundNew">出库-新增</el-menu-item>
-          <el-menu-item index="/stock/outbound/list">出库-列表</el-menu-item>
-          <el-menu-item index="/stock/items/list">库存明细</el-menu-item>
+          <el-menu-item index="/stock/inbound">入库单</el-menu-item>
+          <el-menu-item index="/stock/outbound" @click="handleOutboundNew">出库单</el-menu-item>
+          <el-menu-item index="/stock/outbound/list">操作列表</el-menu-item>
+          <el-menu-item index="/stock/items/list">库存明细列表</el-menu-item>
         </el-sub-menu>
         <el-sub-menu index="user">
           <template #title>

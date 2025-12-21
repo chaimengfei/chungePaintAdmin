@@ -1,10 +1,11 @@
 <script setup>
-import { reactive, ref, onMounted, computed } from 'vue'
+import { reactive, ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { QuestionFilled } from '@element-plus/icons-vue'
 import request from '../api/request'
-import { batchInboundStock, getProductList, getSupplierList } from '../api/stock'
+import { batchInboundStock, getProductList, getSupplierList } from '../api/order'
+import { getUserList } from '../api/user'
 
 const router = useRouter()
 
@@ -20,16 +21,21 @@ const batchForm = reactive({
     specification: '',
     remark: ''
   }],
+  operate_type: 'inbound',  // 操作类型：inbound-入库, return-退货
   supplier_id: '',  // 供应商ID
   operate_time: new Date().toLocaleString('sv-SE').slice(0, 19), // 默认当前本地日期时间
   remark: '',
-  shop_id: null  // 店铺ID
+  shop_id: null,  // 店铺ID
+  customer_id: null,  // 客户ID（退货时使用）
+  customer_name: ''  // 客户名称（退货时使用）
 })
 
 const goodsOptions = ref([])
 const goodsMap = ref({})
 const supplierOptions = ref([])
 const supplierMap = ref({})
+const customerOptions = ref([])
+const customerMap = ref({})
 
 // 用户权限相关
 const isRoot = ref(false)
@@ -64,6 +70,22 @@ function loadSupplierOptions() {
       supplierMap.value = {}
       list.forEach(item => {
         supplierMap.value[item.id] = item
+      })
+    }
+  })
+}
+
+function loadCustomerOptions() {
+  getUserList({ page: 1, page_size: 1000 }).then(res => {
+    if (res.code === 0) {
+      const list = res.data?.list || []
+      customerOptions.value = list.map(item => ({ 
+        label: item.name || item.real_name || '未知用户', 
+        value: item.id 
+      }))
+      customerMap.value = {}
+      list.forEach(item => {
+        customerMap.value[item.id] = item
       })
     }
   })
@@ -192,22 +214,39 @@ function submitBatchForm() {
     return
   }
   
-  if (!batchForm.supplier_id) {
-    ElMessage.error('请选择供货商')
-    return
+  // 判断是否为退货
+  const isReturn = batchForm.operate_type === 'return'
+  
+  // 入库时需要验证供货商
+  if (!isReturn) {
+    if (!batchForm.supplier_id) {
+      ElMessage.error('请选择供货商')
+      return
+    }
+    const supplier = supplierMap.value[batchForm.supplier_id]
+    if (!supplier) {
+      ElMessage.error('供货商信息获取失败')
+      return
+    }
+  }
+  
+  // 退货时需要验证客户
+  if (isReturn) {
+    if (!batchForm.customer_id) {
+      ElMessage.error('退货操作需要选择客户')
+      return
+    }
+    const customer = customerMap.value[batchForm.customer_id]
+    if (!customer) {
+      ElMessage.error('客户信息获取失败')
+      return
+    }
   }
   
   // 为每个商品计算成本
   validItems.forEach(item => {
     calculateCosts(item)
   })
-  
-  // 获取供货商名称
-  const supplier = supplierMap.value[batchForm.supplier_id]
-  if (!supplier) {
-    ElMessage.error('供货商信息获取失败')
-    return
-  }
   
   // 转换数据格式以匹配新接口
   const items = validItems.map(item => ({
@@ -226,23 +265,49 @@ function submitBatchForm() {
     total_amount: totalSpent.value,
     operator: operatorInfo.real_name || operatorInfo.name || '未知用户',
     operator_id: operatorInfo.id || 0,
-    supplier: supplier.name,
     remark: batchForm.remark || '',
-    shop_id: batchForm.shop_id
+    shop_id: batchForm.shop_id,
+    is_return: isReturn
+  }
+  
+  // 入库时添加供应商信息
+  if (!isReturn) {
+    const supplier = supplierMap.value[batchForm.supplier_id]
+    data.supplier = supplier.name
+  }
+  
+  // 退货时添加客户信息
+  if (isReturn) {
+    const customer = customerMap.value[batchForm.customer_id]
+    data.user_name = customer.name || customer.real_name || '未知用户'
+    data.user_id = customer.id
   }
   
   batchInboundStock(data).then(() => {
-    ElMessage.success('入库成功')
-    router.push('/stock/inbound/list')
+    ElMessage.success(isReturn ? '退货入库成功' : '入库成功')
+    router.push('/stock/inbound')
   }).catch(() => {
-    ElMessage.error('入库失败')
+    ElMessage.error(isReturn ? '退货入库失败' : '入库失败')
   })
 }
+
+// 监听操作类型切换，清空相关字段
+watch(() => batchForm.operate_type, (newType) => {
+  if (newType === 'inbound') {
+    // 切换到入库时，清空客户信息
+    batchForm.customer_id = null
+    batchForm.customer_name = ''
+  } else if (newType === 'return') {
+    // 切换到退货时，清空供应商信息
+    batchForm.supplier_id = ''
+  }
+})
 
 onMounted(() => {
   loadUserInfo()
   loadGoodsOptions()
   loadSupplierOptions()
+  loadCustomerOptions()
   
   // 监听全局店铺切换事件
   window.addEventListener('shopChanged', (event) => {
@@ -321,7 +386,23 @@ onMounted(() => {
     </div>
     
     <el-card>
+      <!-- 提示信息 -->
+      <el-alert
+        title="入库或退货均在该页面操作"
+        type="warning"
+        :closable="false"
+        style="margin-bottom: 20px;"
+      />
+      
       <el-form label-width="120px" style="max-width: 1200px">
+        <!-- 操作类型 -->
+        <el-form-item label="操作类型" style="margin-bottom: 20px;">
+          <el-radio-group v-model="batchForm.operate_type">
+            <el-radio label="inbound">入库</el-radio>
+            <el-radio label="return">退货</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        
         <!-- 店铺选择 -->
         <el-form-item label="所属店铺" style="margin-bottom: 20px;">
           <div style="display: flex; gap: 20px; align-items: center;">
@@ -352,7 +433,7 @@ onMounted(() => {
           </div>
         </el-form-item>
         
-        <el-form-item label="供货商" style="margin-bottom: 20px;">
+        <el-form-item label="供货商" style="margin-bottom: 20px;" v-if="batchForm.operate_type === 'inbound'">
           <div style="display: flex; gap: 20px; align-items: center;">
             <div style="flex: 1; display: flex; align-items: center; gap: 12px;">
               <el-select
@@ -362,6 +443,33 @@ onMounted(() => {
                 style="flex: 1;"
               >
                 <el-option v-for="opt in supplierOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+              </el-select>
+            </div>
+            <div style="flex: 1; display: flex; align-items: center; gap: 12px;">
+              <label style="font-size: 14px; color: #606266; white-space: nowrap; min-width: 80px;">入库时间</label>
+              <el-date-picker
+                v-model="batchForm.operate_time"
+                type="datetime"
+                placeholder="选择入库日期时间"
+                style="flex: 1;"
+                format="YYYY-MM-DD HH:mm:ss"
+                value-format="YYYY-MM-DD HH:mm:ss"
+              />
+            </div>
+          </div>
+        </el-form-item>
+        
+        <!-- 退货时的客户选择 -->
+        <el-form-item label="客户" style="margin-bottom: 20px;" v-if="batchForm.operate_type === 'return'">
+          <div style="display: flex; gap: 20px; align-items: center;">
+            <div style="flex: 1; display: flex; align-items: center; gap: 12px;">
+              <el-select
+                v-model="batchForm.customer_id"
+                placeholder="请选择客户"
+                filterable
+                style="flex: 1;"
+              >
+                <el-option v-for="opt in customerOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
               </el-select>
             </div>
             <div style="flex: 1; display: flex; align-items: center; gap: 12px;">

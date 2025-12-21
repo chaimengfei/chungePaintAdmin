@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { getProductList, deleteProduct } from '../api/stock'
+import { getProductList, deleteProduct } from '../api/order'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { QuestionFilled, Plus } from '@element-plus/icons-vue'
 

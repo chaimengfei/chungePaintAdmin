@@ -1,9 +1,5 @@
 <template>
   <div>
-    <div style="margin-bottom: 20px;">
-      <h1 style="font-size: 32px; font-weight: bold; color: #303133;">库存明细</h1>
-    </div>
-    
     <!-- 筛选面板 -->
     <el-card style="margin-bottom: 20px;">
       <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
@@ -135,8 +131,8 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { ArrowRight } from '@element-plus/icons-vue'
-import { getStockItemsList } from '../api/stock'
-import { getProductList } from '../api/stock'
+import { getStockItemsList } from '../api/order'
+import { getProductList } from '../api/order'
 
 const stockItemsList = ref([])
 const loading = ref(false)

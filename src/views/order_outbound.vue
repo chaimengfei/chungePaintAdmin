@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { QuestionFilled } from '@element-plus/icons-vue'
 import request from '../api/request'
-import { batchOutboundStock, getProductList, DraftManager } from '../api/stock'
+import { batchOutboundStock, getProductList, DraftManager } from '../api/order'
 
 const router = useRouter()
 
@@ -506,16 +506,6 @@ onMounted(() => {
       </template>
     </el-alert>
 
-    <div style="margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
-      <h1 style="font-size: 32px; font-weight: bold; color: #303133;">
-        {{ isDraft ? '编辑草稿出库单' : '新增出库单' }}
-      </h1>
-      <div v-if="isDraft" style="display: flex; gap: 12px;">
-        <el-tag type="warning" size="large">草稿状态</el-tag>
-        <el-button type="danger" size="small" @click="deleteDraft">删除草稿</el-button>
-      </div>
-    </div>
-    
     <el-card>
       <el-form label-width="120px" style="max-width: 1200px">
         <!-- 店铺选择 -->

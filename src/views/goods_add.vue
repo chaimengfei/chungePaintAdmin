@@ -260,7 +260,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Plus, QuestionFilled, Loading } from '@element-plus/icons-vue'
 import { getCategoryList } from '../api/category'
-import { addProduct } from '../api/stock'
+import { addProduct } from '../api/order'
 import { uploadToOSS, validateFile } from '../utils/ossUpload'
 
 const router = useRouter()

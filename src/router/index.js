@@ -4,10 +4,10 @@ import GoodsEdit from '../views/goods_edit.vue'
 import GoodsDetail from '../views/goods_detail.vue'
 import GoodsAdd from '../views/goods_add.vue'
 import CategoryList from '../views/category_list.vue'
-import StockInbound from '../views/order_inbound.vue'
-import StockOutbound from '../views/order_outbound.vue'
-import StockOutboundList from '../views/order_list.vue'
-import StockItemsList from '../views/order_items_list.vue'
+import OrderInbound from '../views/order_inbound.vue'
+import OrderOutbound from '../views/order_outbound.vue'
+import OrderOutboundList from '../views/order_list.vue'
+import OrderItemsList from '../views/order_items_list.vue'
 import OrderFee from '../views/order_fee.vue'
 import UserList from '../views/user_list.vue'
 import UserEdit from '../views/user_edit.vue'
@@ -26,10 +26,10 @@ const routes = [
   { path: '/goods/edit/:id', component: GoodsEdit },
   { path: '/goods/detail', component: GoodsDetail },
   { path: '/category', component: CategoryList },
-  { path: '/stock/outbound', component: StockOutbound, meta: { title: '出库-新增' } },
-  { path: '/stock/outbound/list', component: StockOutboundList, meta: { title: '操作列表' } },
-  { path: '/stock/items/list', component: StockItemsList, meta: { title: '库存明细' } },
-  { path: '/stock/inbound', component: StockInbound },
+  { path: '/stock/outbound', component: OrderOutbound, meta: { title: '出库-新增' } },
+  { path: '/stock/outbound/list', component: OrderOutboundList, meta: { title: '操作列表' } },
+  { path: '/stock/items/list', component: OrderItemsList, meta: { title: '库存明细' } },
+  { path: '/stock/inbound', component: OrderInbound },
   { path: '/stock/fee', component: OrderFee, meta: { title: '其它费用' } },
   { path: '/user/list', component: UserList },
   { path: '/user/edit', component: UserEdit },

@@ -166,15 +166,24 @@
             <div v-else style="color: #909399; font-size: 12px;">暂无商品明细</div>
           </template>
         </el-table-column>
-        <el-table-column label="单据" width="120">
+        <el-table-column label="单据" width="500" min-width="500">
           <template #default="scope">
-            <div v-if="scope.row.invoice_url" class="invoice-image-container">
-              <img 
-                :src="scope.row.invoice_url" 
-                :alt="'单据图片'"
-                class="invoice-image"
-                @click="viewInvoice(scope.row.invoice_url)"
-              />
+            <div 
+              v-if="scope.row.invoice_url" 
+              @dblclick="viewInvoice(scope.row.invoice_url, scope.row.invoice_html)"
+              style="width: 100%; height: 300px; border: 1px solid #e4e7ed; border-radius: 4px; overflow: hidden; background: #fff; position: relative; cursor: pointer;"
+              title="双击查看大图"
+            >
+              <iframe
+                v-if="scope.row.invoice_html"
+                :srcdoc="scope.row.invoice_html"
+                style="width: 200%; height: 200%; border: none; transform: scale(0.5); transform-origin: 0 0; pointer-events: none;"
+                frameborder="0"
+                scrolling="no"
+              ></iframe>
+              <div v-else style="display: flex; align-items: center; justify-content: center; height: 100%; color: #909399;">
+                <span>加载中...</span>
+              </div>
             </div>
             <span v-else style="color: #909399;">无单据</span>
           </template>
@@ -199,6 +208,31 @@
         />
       </div>
     </el-card>
+
+    <!-- 单据预览对话框 -->
+    <el-dialog
+      v-model="invoiceDialogVisible"
+      title="单据预览"
+      width="90%"
+      :close-on-click-modal="false"
+      :close-on-press-escape="true"
+    >
+      <div v-loading="invoiceLoading" style="height: 70vh; overflow: hidden; background: #fff;">
+        <iframe
+          v-if="invoiceHtmlContent"
+          :srcdoc="invoiceHtmlContent"
+          style="width: 100%; height: 100%; border: none;"
+          frameborder="0"
+        ></iframe>
+        <div v-else-if="!invoiceLoading" style="text-align: center; padding: 40px; color: #909399;">
+          暂无内容
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="invoiceDialogVisible = false">关闭</el-button>
+        <el-button type="primary" @click="openInvoiceInNewWindow">下载文件</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -230,6 +264,12 @@ const shopInfo = ref(null)
 const shopList = ref([])
 const selectedShopId = ref(null)
 const operatorInfo = ref(null) // 当前操作员信息
+
+// 单据预览相关
+const invoiceDialogVisible = ref(false)
+const currentInvoiceUrl = ref('')
+const invoiceHtmlContent = ref('')
+const invoiceLoading = ref(false)
 
 // 时间范围筛选
 const dateRange = ref([])
@@ -371,6 +411,13 @@ function loadOutboundList() {
     if (res.code === 0) {
       outboundList.value = res.data.list || []
       total.value = res.data.total || 0
+      
+      // 为每个有 invoice_url 的行加载 HTML 内容
+      outboundList.value.forEach((row, index) => {
+        if (row.invoice_url) {
+          loadInvoiceHtml(row, index)
+        }
+      })
     } else {
       ElMessage.error(res.message || '获取出库列表失败')
     }
@@ -551,15 +598,91 @@ function setPaymentStatus(row) {
   })
 }
 
-// 查看单据
-function viewInvoice(invoiceUrl) {
+// 查看单据（双击时调用，可以传入已有的 HTML 内容）
+async function viewInvoice(invoiceUrl, invoiceHtml = null) {
   if (!invoiceUrl) {
     ElMessage.warning('暂无单据')
     return
   }
   
-  // 在新窗口中打开单据图片
-  window.open(invoiceUrl, '_blank')
+  // 在对话框中预览单据
+  currentInvoiceUrl.value = invoiceUrl
+  invoiceDialogVisible.value = true
+  
+  // 如果已经传入了 HTML 内容，直接使用
+  if (invoiceHtml) {
+    invoiceHtmlContent.value = invoiceHtml
+    invoiceLoading.value = false
+    return
+  }
+  
+  // 否则重新获取
+  invoiceLoading.value = true
+  invoiceHtmlContent.value = ''
+  
+  try {
+    // 使用 fetch 获取 HTML 内容，添加 mode: 'cors' 处理跨域
+    const response = await fetch(invoiceUrl, {
+      method: 'GET',
+      mode: 'cors',
+      cache: 'no-cache'
+    })
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    
+    const htmlText = await response.text()
+    invoiceHtmlContent.value = htmlText
+  } catch (error) {
+    console.error('加载单据内容失败:', error)
+    
+    // 如果 fetch 失败（可能是 CORS 问题），显示提示信息
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      ElMessage.warning('无法直接加载内容，请使用"下载文件"查看')
+      invoiceHtmlContent.value = `
+        <div style="text-align: center; padding: 40px;">
+          <p style="color: #909399; margin-bottom: 20px;">由于跨域限制，无法直接预览</p>
+          <p style="color: #606266;">请点击下方"下载文件"按钮查看单据内容</p>
+        </div>
+      `
+    } else {
+      ElMessage.error('加载单据内容失败，请稍后重试')
+      invoiceHtmlContent.value = '<div style="text-align: center; padding: 40px; color: #f56c6c;">加载失败，请检查网络连接</div>'
+    }
+  } finally {
+    invoiceLoading.value = false
+  }
+}
+
+// 下载文件（在新窗口打开）
+function openInvoiceInNewWindow() {
+  if (currentInvoiceUrl.value) {
+    window.open(currentInvoiceUrl.value, '_blank')
+  }
+}
+
+// 加载单个单据的 HTML 内容（用于表格中直接显示）
+async function loadInvoiceHtml(row, index) {
+  if (!row.invoice_url) return
+  
+  try {
+    const response = await fetch(row.invoice_url, {
+      method: 'GET',
+      mode: 'cors',
+      cache: 'no-cache'
+    })
+    
+    if (response.ok) {
+      const htmlText = await response.text()
+      // 使用 Vue 的响应式更新
+      row.invoice_html = htmlText
+    }
+  } catch (error) {
+    console.error('加载单据内容失败:', error)
+    // 如果加载失败，可以设置一个错误提示
+    row.invoice_html = '<div style="text-align: center; padding: 20px; color: #909399;">加载失败</div>'
+  }
 }
 
 // 查看详情
@@ -649,28 +772,4 @@ onMounted(() => {
   margin-top: 20px;
 }
 
-/* 单据图片样式 */
-.invoice-image-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 60px;
-  width: 100px;
-  overflow: hidden;
-  border-radius: 4px;
-  border: 1px solid #e4e7ed;
-  background-color: #fafafa;
-}
-
-.invoice-image {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: cover;
-  cursor: pointer;
-  transition: transform 0.2s ease;
-}
-
-.invoice-image:hover {
-  transform: scale(1.05);
-}
 </style>

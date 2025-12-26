@@ -53,13 +53,13 @@
 
     <!-- 图表区域 -->
     <div v-loading="loading">
-      <!-- 1. 按行业统计（饼图） -->
+      <!-- 1. 按行业销售额统计（饼图） -->
       <el-card style="margin-bottom: 20px;">
         <template #header>
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h3 style="margin: 0;">按行业统计</h3>
+            <h3 style="margin: 0;">按行业销售额统计</h3>
             <div>
-              <el-button text @click="downloadChart('industryChart')">
+              <el-button text @click="downloadChart('salesByIndustryChart')">
                 <el-icon><Download /></el-icon>
               </el-button>
             </div>
@@ -69,7 +69,7 @@
           <!-- 左侧：汇总数据 -->
           <div style="display: flex; flex-direction: column; justify-content: center; padding: 20px; gap: 16px;">
             <div 
-              v-for="(item, index) in industrySummary" 
+              v-for="(item, index) in salesByIndustrySummary" 
               :key="item.name" 
               :style="{
                 padding: index === 0 ? '32px 40px' : '16px 20px',
@@ -83,40 +83,39 @@
               <div :style="{ marginBottom: index === 0 ? '8px' : '4px', fontSize: index === 0 ? '28px' : '14px', color: '#909399' }">{{ item.name }}</div>
               <div :style="{ fontSize: index === 0 ? '36px' : '18px', color: '#303133', fontWeight: '600' }">{{ item.amount }}元</div>
             </div>
-            <div v-if="industrySummary.length === 0" style="color: #999; text-align: center; padding: 20px;">
+            <div v-if="salesByIndustrySummary.length === 0" style="color: #999; text-align: center; padding: 20px;">
               暂无数据
             </div>
           </div>
           <!-- 右侧：饼图 -->
           <div>
-            <div ref="industryChartRef" style="width: 100%; height: 400px;"></div>
+            <div ref="salesByIndustryChartRef" style="width: 100%; height: 400px;"></div>
           </div>
         </div>
       </el-card>
 
-      <!-- 2. 雕塑行业Top5 和 广告行业Top5（柱状图，并排显示） -->
-      <el-card style="margin-bottom: 20px;">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-          <!-- 雕塑行业Top5 -->
-          <div>
-            <h3 style="margin: 0 0 16px 0;">雕塑行业Top5</h3>
-            <div ref="sculptTop5ChartRef" style="width: 100%; height: 400px;"></div>
-          </div>
-          <!-- 广告行业Top5 -->
-          <div>
-            <h3 style="margin: 0 0 16px 0;">广告行业Top5</h3>
-            <div ref="advertTop5ChartRef" style="width: 100%; height: 400px;"></div>
-          </div>
-        </div>
-      </el-card>
-
-      <!-- 4. 按雇佣分类统计（饼图） -->
+      <!-- 2. 客户销售总额排名（柱状图） -->
       <el-card style="margin-bottom: 20px;">
         <template #header>
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h3 style="margin: 0;">按雇佣分类统计</h3>
+            <h3 style="margin: 0;">客户销售总额排名</h3>
             <div>
-              <el-button text @click="downloadChart('employChart')">
+              <el-button text @click="downloadChart('customerRankingChart')">
+                <el-icon><Download /></el-icon>
+              </el-button>
+            </div>
+          </div>
+        </template>
+        <div ref="customerRankingChartRef" style="width: 100%; height: 400px;"></div>
+      </el-card>
+
+      <!-- 3. 现金订单统计（饼图） -->
+      <el-card style="margin-bottom: 20px;">
+        <template #header>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0;">现金订单统计</h3>
+            <div>
+              <el-button text @click="downloadChart('cashByIndustryChart')">
                 <el-icon><Download /></el-icon>
               </el-button>
             </div>
@@ -126,37 +125,70 @@
           <!-- 左侧：汇总数据 -->
           <div style="display: flex; flex-direction: column; justify-content: center; padding: 20px; gap: 16px;">
             <div 
-              v-for="(item, index) in employSummary" 
+              v-for="(item, index) in cashByIndustrySummary" 
               :key="item.name" 
               :style="{
-                padding: index === 0 ? '32px 40px' : '16px 20px',
+                padding: '16px 20px',
                 borderRadius: '8px',
                 backgroundColor: index === 0 ? '#E8F5E9' : index === 1 ? '#E3F2FD' : '#FFF3E0',
-                fontSize: index === 0 ? '32px' : '16px',
+                fontSize: '16px',
                 color: '#606266',
                 fontWeight: '500'
               }"
             >
-              <div :style="{ marginBottom: index === 0 ? '8px' : '4px', fontSize: index === 0 ? '28px' : '14px', color: '#909399' }">{{ item.name }}</div>
-              <div :style="{ fontSize: index === 0 ? '36px' : '18px', color: '#303133', fontWeight: '600' }">{{ item.amount }}元</div>
+              <div :style="{ marginBottom: '4px', fontSize: '14px', color: '#909399' }">{{ item.name }}</div>
+              <div :style="{ fontSize: '18px', color: '#303133', fontWeight: '600' }">{{ item.amount }}元</div>
             </div>
-            <div v-if="employSummary.length === 0" style="color: #999; text-align: center; padding: 20px;">
+            <div v-if="cashByIndustrySummary.length === 0" style="color: #999; text-align: center; padding: 20px;">
               暂无数据
             </div>
           </div>
           <!-- 右侧：饼图 -->
           <div>
-            <div ref="employChartRef" style="width: 100%; height: 400px;"></div>
+            <div ref="cashByIndustryChartRef" style="width: 100%; height: 400px;"></div>
           </div>
         </div>
       </el-card>
 
-      <!-- 5. 工人行业Top10（柱状图） -->
+      <!-- 4. 赊账订单统计（饼图） -->
       <el-card>
         <template #header>
-          <h3 style="margin: 0;">工人行业Top10</h3>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0;">赊账订单统计</h3>
+            <div>
+              <el-button text @click="downloadChart('creditByIndustryChart')">
+                <el-icon><Download /></el-icon>
+              </el-button>
+            </div>
+          </div>
         </template>
-        <div ref="workerTop10ChartRef" style="width: 100%; height: 400px;"></div>
+        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px;">
+          <!-- 左侧：汇总数据 -->
+          <div style="display: flex; flex-direction: column; justify-content: center; padding: 20px; gap: 16px;">
+            <div 
+              v-for="(item, index) in creditByIndustrySummary" 
+              :key="item.name" 
+              :style="{
+                padding: '16px 20px',
+                borderRadius: '8px',
+                backgroundColor: index === 0 ? '#E8F5E9' : index === 1 ? '#E3F2FD' : '#FFF3E0',
+                fontSize: '16px',
+                color: '#606266',
+                fontWeight: '500'
+              }"
+            >
+              <div :style="{ marginBottom: '4px', fontSize: '14px', color: '#909399' }">{{ item.name }}</div>
+              <div :style="{ fontSize: '18px', color: '#303133', fontWeight: '600' }">{{ item.amount }}元</div>
+            </div>
+            <div v-if="creditByIndustrySummary.length === 0" style="color: #999; text-align: center; padding: 20px;">
+              暂无数据
+            </div>
+          </div>
+          <!-- 右侧：饼图 -->
+          <div>
+            <div ref="creditByIndustryChartRef" style="width: 100%; height: 400px;"></div>
+          </div>
+        </div>
       </el-card>
     </div>
   </div>
@@ -179,36 +211,40 @@ const query = ref({
 const dateRange = ref(null)
 
 // 图表相关
-const industryChartRef = ref(null)
-const sculptTop5ChartRef = ref(null)
-const advertTop5ChartRef = ref(null)
-const employChartRef = ref(null)
-const workerTop10ChartRef = ref(null)
-let industryChart = null
-let sculptTop5Chart = null
-let advertTop5Chart = null
-let employChart = null
-let workerTop10Chart = null
+const salesByIndustryChartRef = ref(null)
+const customerRankingChartRef = ref(null)
+const cashByIndustryChartRef = ref(null)
+const creditByIndustryChartRef = ref(null)
+let salesByIndustryChart = null
+let customerRankingChart = null
+let cashByIndustryChart = null
+let creditByIndustryChart = null
 
 // 用户权限相关
 const isRoot = ref(false)
 const shopInfo = ref(null)
 const shopList = ref([])
 
-// 行业汇总数据
-const industrySummary = computed(() => {
-  const stats = dashboardData.value.industry_amount_stats || []
-  const industryMap = {
-    'sculpt': '雕塑',
-    'advert': '广告',
-    'other': '其它'
-  }
-  
+// 行业名称映射
+const industryMap = {
+  'factory_advert': '工厂-广告',
+  'factory_sculpt': '工厂-雕塑',
+  'worker': '工人'
+}
+
+// 将分转换为元
+function centsToYuan(cents) {
+  return (cents / 100).toFixed(2)
+}
+
+// 按行业销售额汇总数据
+const salesByIndustrySummary = computed(() => {
+  const stats = dashboardData.value.sales_by_industry || []
   const summary = []
   let totalAmount = 0
   
   stats.forEach(item => {
-    const amount = parseFloat(item.order_amount || 0)
+    const amount = parseFloat(item.order_amount || 0) / 100 // 分转元
     totalAmount += amount
     summary.push({
       name: industryMap[item.industry] || item.industry,
@@ -226,56 +262,22 @@ const industrySummary = computed(() => {
   return summary
 })
 
-// 雇佣分类汇总数据
-const employSummary = computed(() => {
-  const stats = dashboardData.value.employ_stats || []
-  const workers = dashboardData.value.worker_top10 || []
-  
-  // 统计工厂金额（从employ_stats中获取）
-  let factoryAmount = 0
-  stats.forEach(item => {
-    if (item.employ === 'factory') {
-      factoryAmount += parseFloat(item.order_amount || 0)
-    }
-  })
-  
-  // 统计工人包活和不包活（从worker_top10中获取）
-  // master_proj === 1 表示包活，master_proj === 0 表示不包活
-  let workerPackageAmount = 0  // 包活金额
-  let workerNoPackageAmount = 0  // 不包活金额
-  
-  workers.forEach(item => {
-    const amount = parseFloat(item.order_amount || 0)
-    // master_proj === 1 表示包活
-    const isPackage = item.master_proj === 1
-    if (isPackage) {
-      workerPackageAmount += amount
-    } else {
-      workerNoPackageAmount += amount
-    }
-  })
-  
-  const summary = []
-  if (factoryAmount > 0) {
-    summary.push({
-      name: '工厂',
-      amount: factoryAmount.toFixed(2)
-    })
-  }
-  if (workerPackageAmount > 0) {
-    summary.push({
-      name: '工人-包活',
-      amount: workerPackageAmount.toFixed(2)
-    })
-  }
-  if (workerNoPackageAmount > 0) {
-    summary.push({
-      name: '工人-不包活',
-      amount: workerNoPackageAmount.toFixed(2)
-    })
-  }
-  
-  return summary
+// 现金订单汇总数据
+const cashByIndustrySummary = computed(() => {
+  const stats = dashboardData.value.cash_by_industry || []
+  return stats.map(item => ({
+    name: industryMap[item.industry] || item.industry,
+    amount: (parseFloat(item.order_amount || 0) / 100).toFixed(2) // 分转元
+  }))
+})
+
+// 赊账订单汇总数据
+const creditByIndustrySummary = computed(() => {
+  const stats = dashboardData.value.credit_by_industry || []
+  return stats.map(item => ({
+    name: industryMap[item.industry] || item.industry,
+    amount: (parseFloat(item.order_amount || 0) / 100).toFixed(2) // 分转元
+  }))
 })
 
 // 加载用户权限信息
@@ -363,30 +365,24 @@ function loadData() {
 
 // 渲染所有图表
 function renderCharts() {
-  renderIndustryChart()
-  renderSculptTop5Chart()
-  renderAdvertTop5Chart()
-  renderEmployChart()
-  renderWorkerTop10Chart()
+  renderSalesByIndustryChart()
+  renderCustomerRankingChart()
+  renderCashByIndustryChart()
+  renderCreditByIndustryChart()
 }
 
-// 1. 按行业统计（饼图）
-function renderIndustryChart() {
-  if (!industryChartRef.value) return
+// 1. 按行业销售额统计（饼图）
+function renderSalesByIndustryChart() {
+  if (!salesByIndustryChartRef.value) return
   
-  if (!industryChart) {
-    industryChart = echarts.init(industryChartRef.value)
+  if (!salesByIndustryChart) {
+    salesByIndustryChart = echarts.init(salesByIndustryChartRef.value)
   }
   
-  const stats = dashboardData.value.industry_amount_stats || []
-  const industryMap = {
-    'sculpt': '雕塑',
-    'advert': '广告',
-    'other': '其它'
-  }
+  const stats = dashboardData.value.sales_by_industry || []
   
   if (stats.length === 0) {
-    industryChart.setOption({
+    salesByIndustryChart.setOption({
       title: {
         text: '暂无数据',
         left: 'center',
@@ -402,12 +398,12 @@ function renderIndustryChart() {
   
   const pieData = stats.map(item => ({
     name: industryMap[item.industry] || item.industry,
-    value: parseFloat(item.order_amount || 0)
+    value: parseFloat(item.order_amount || 0) / 100 // 分转元
   }))
   
   const totalAmount = pieData.reduce((sum, item) => sum + item.value, 0)
   
-  industryChart.setOption({
+  salesByIndustryChart.setOption({
     tooltip: {
       trigger: 'item',
       formatter: function(params) {
@@ -425,7 +421,7 @@ function renderIndustryChart() {
     },
     series: [
       {
-        name: '行业金额',
+        name: '行业销售额',
         type: 'pie',
         radius: '70%',
         avoidLabelOverlap: false,
@@ -451,18 +447,18 @@ function renderIndustryChart() {
   })
 }
 
-// 2. 雕塑行业Top5（柱状图）
-function renderSculptTop5Chart() {
-  if (!sculptTop5ChartRef.value) return
+// 2. 客户销售总额排名（柱状图）
+function renderCustomerRankingChart() {
+  if (!customerRankingChartRef.value) return
   
-  if (!sculptTop5Chart) {
-    sculptTop5Chart = echarts.init(sculptTop5ChartRef.value)
+  if (!customerRankingChart) {
+    customerRankingChart = echarts.init(customerRankingChartRef.value)
   }
   
-  const top5 = dashboardData.value.sculpt_top5 || []
+  const ranking = dashboardData.value.customer_ranking || []
   
-  if (top5.length === 0) {
-    sculptTop5Chart.setOption({
+  if (ranking.length === 0) {
+    customerRankingChart.setOption({
       title: {
         text: '暂无数据',
         left: 'center',
@@ -476,10 +472,15 @@ function renderSculptTop5Chart() {
     return
   }
   
-  const names = top5.map(item => item.user_name || '未知用户')
-  const amounts = top5.map(item => parseFloat(item.order_amount || 0))
+  // 按金额降序排序
+  const sortedRanking = [...ranking].sort((a, b) => {
+    return parseFloat(b.order_amount || 0) - parseFloat(a.order_amount || 0)
+  })
   
-  sculptTop5Chart.setOption({
+  const names = sortedRanking.map(item => item.user_name || '未知用户')
+  const amounts = sortedRanking.map(item => parseFloat(item.order_amount || 0) / 100) // 分转元
+  
+  customerRankingChart.setOption({
     tooltip: {
       trigger: 'axis',
       axisPointer: {
@@ -488,7 +489,7 @@ function renderSculptTop5Chart() {
       formatter: function(params) {
         const param = params[0]
         return param.name + '<br/>' +
-               '总金额: ¥' + param.value.toFixed(2)
+               '销售总额: ¥' + param.value.toFixed(2)
       }
     },
     grid: {
@@ -511,7 +512,7 @@ function renderSculptTop5Chart() {
     },
     series: [
       {
-        name: '总金额',
+        name: '销售总额',
         type: 'bar',
         data: amounts,
         itemStyle: {
@@ -527,18 +528,18 @@ function renderSculptTop5Chart() {
   })
 }
 
-// 3. 广告行业Top5（柱状图）
-function renderAdvertTop5Chart() {
-  if (!advertTop5ChartRef.value) return
+// 3. 现金订单统计（饼图）
+function renderCashByIndustryChart() {
+  if (!cashByIndustryChartRef.value) return
   
-  if (!advertTop5Chart) {
-    advertTop5Chart = echarts.init(advertTop5ChartRef.value)
+  if (!cashByIndustryChart) {
+    cashByIndustryChart = echarts.init(cashByIndustryChartRef.value)
   }
   
-  const top5 = dashboardData.value.advert_top5 || []
+  const stats = dashboardData.value.cash_by_industry || []
   
-  if (top5.length === 0) {
-    advertTop5Chart.setOption({
+  if (stats.length === 0) {
+    cashByIndustryChart.setOption({
       title: {
         text: '暂无数据',
         left: 'center',
@@ -552,130 +553,14 @@ function renderAdvertTop5Chart() {
     return
   }
   
-  const names = top5.map(item => item.user_name || '未知用户')
-  const amounts = top5.map(item => parseFloat(item.order_amount || 0))
-  
-  advertTop5Chart.setOption({
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: {
-        type: 'shadow'
-      },
-      formatter: function(params) {
-        const param = params[0]
-        return param.name + '<br/>' +
-               '总金额: ¥' + param.value.toFixed(2)
-      }
-    },
-    grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '3%',
-      containLabel: true
-    },
-    xAxis: {
-      type: 'category',
-      data: names,
-      axisLabel: {
-        rotate: 45,
-        interval: 0
-      }
-    },
-    yAxis: {
-      type: 'value',
-      name: '金额(元)'
-    },
-    series: [
-      {
-        name: '总金额',
-        type: 'bar',
-        data: amounts,
-        itemStyle: {
-          color: '#67C23A'
-        },
-        label: {
-          show: true,
-          position: 'top',
-          formatter: '¥{c}'
-        }
-      }
-    ]
-  })
-}
-
-// 4. 按雇佣分类统计（饼图：工厂、工人-包活、工人-不包活）
-function renderEmployChart() {
-  if (!employChartRef.value) return
-  
-  if (!employChart) {
-    employChart = echarts.init(employChartRef.value)
-  }
-  
-  const stats = dashboardData.value.employ_stats || []
-  const workers = dashboardData.value.worker_top10 || []
-  
-  // 统计工厂（从employ_stats中获取）
-  let factoryAmount = 0
-  stats.forEach(item => {
-    if (item.employ === 'factory') {
-      factoryAmount += parseFloat(item.order_amount || 0)
-    }
-  })
-  
-  // 统计工人包活和不包活（从worker_top10中获取）
-  // master_proj === 1 表示包活，master_proj === 0 表示不包活
-  let workerPackageAmount = 0
-  let workerNoPackageAmount = 0
-  
-  workers.forEach(item => {
-    const amount = parseFloat(item.order_amount || 0)
-    // master_proj === 1 表示包活
-    const isPackage = item.master_proj === 1
-    if (isPackage) {
-      workerPackageAmount += amount
-    } else {
-      workerNoPackageAmount += amount
-    }
-  })
-  
-  const pieData = []
-  if (factoryAmount > 0) {
-    pieData.push({
-      name: '工厂',
-      value: factoryAmount
-    })
-  }
-  if (workerPackageAmount > 0) {
-    pieData.push({
-      name: '工人-包活',
-      value: workerPackageAmount
-    })
-  }
-  if (workerNoPackageAmount > 0) {
-    pieData.push({
-      name: '工人-不包活',
-      value: workerNoPackageAmount
-    })
-  }
-  
-  if (pieData.length === 0) {
-    employChart.setOption({
-      title: {
-        text: '暂无数据',
-        left: 'center',
-        top: 'middle',
-        textStyle: {
-          color: '#999',
-          fontSize: 16
-        }
-      }
-    })
-    return
-  }
+  const pieData = stats.map(item => ({
+    name: industryMap[item.industry] || item.industry,
+    value: parseFloat(item.order_amount || 0) / 100 // 分转元
+  }))
   
   const totalAmount = pieData.reduce((sum, item) => sum + item.value, 0)
   
-  employChart.setOption({
+  cashByIndustryChart.setOption({
     tooltip: {
       trigger: 'item',
       formatter: function(params) {
@@ -693,7 +578,7 @@ function renderEmployChart() {
     },
     series: [
       {
-        name: '雇佣分类',
+        name: '现金订单',
         type: 'pie',
         radius: '70%',
         avoidLabelOverlap: false,
@@ -719,18 +604,18 @@ function renderEmployChart() {
   })
 }
 
-// 5. 工人行业Top10（柱状图）
-function renderWorkerTop10Chart() {
-  if (!workerTop10ChartRef.value) return
+// 4. 赊账订单统计（饼图）
+function renderCreditByIndustryChart() {
+  if (!creditByIndustryChartRef.value) return
   
-  if (!workerTop10Chart) {
-    workerTop10Chart = echarts.init(workerTop10ChartRef.value)
+  if (!creditByIndustryChart) {
+    creditByIndustryChart = echarts.init(creditByIndustryChartRef.value)
   }
   
-  const top10 = dashboardData.value.worker_top10 || []
+  const stats = dashboardData.value.credit_by_industry || []
   
-  if (top10.length === 0) {
-    workerTop10Chart.setOption({
+  if (stats.length === 0) {
+    creditByIndustryChart.setOption({
       title: {
         text: '暂无数据',
         left: 'center',
@@ -744,68 +629,52 @@ function renderWorkerTop10Chart() {
     return
   }
   
-  const names = top10.map(item => {
-    const userName = item.user_name || '未知用户'
-    // master_proj === 1 表示包活
-    const isPackage = item.master_proj === 1
-    return `${userName}(${isPackage ? '包活' : '不包活'})`
-  })
-  const amounts = top10.map(item => parseFloat(item.order_amount || 0))
-  const colors = top10.map(item => {
-    // master_proj === 1 表示包活
-    const isPackage = item.master_proj === 1
-    return isPackage ? '#E6A23C' : '#F56C6C'
-  })
+  const pieData = stats.map(item => ({
+    name: industryMap[item.industry] || item.industry,
+    value: parseFloat(item.order_amount || 0) / 100 // 分转元
+  }))
   
-  workerTop10Chart.setOption({
+  const totalAmount = pieData.reduce((sum, item) => sum + item.value, 0)
+  
+  creditByIndustryChart.setOption({
     tooltip: {
-      trigger: 'axis',
-      axisPointer: {
-        type: 'shadow'
-      },
+      trigger: 'item',
       formatter: function(params) {
-        const param = params[0]
-        const item = top10[param.dataIndex]
-        // master_proj === 1 表示包活
-        const isPackage = item.master_proj === 1
-        return param.name + '<br/>' +
-               '是否包活: ' + (isPackage ? '是' : '否') + '<br/>' +
-               '总金额: ¥' + param.value.toFixed(2)
+        const percent = totalAmount > 0 ? ((params.value / totalAmount) * 100).toFixed(2) : '0.00'
+        return params.name + '<br/>' +
+               '金额: ¥' + params.value.toFixed(2) + '<br/>' +
+               '占比: ' + percent + '%'
       }
     },
-    grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '3%',
-      containLabel: true
-    },
-    xAxis: {
-      type: 'category',
-      data: names,
-      axisLabel: {
-        rotate: 45,
-        interval: 0
-      }
-    },
-    yAxis: {
-      type: 'value',
-      name: '金额(元)'
+    legend: {
+      orient: 'horizontal',
+      left: 'center',
+      top: 'top',
+      data: pieData.map(item => item.name)
     },
     series: [
       {
-        name: '总金额',
-        type: 'bar',
-        data: amounts.map((amount, index) => ({
-          value: amount,
-          itemStyle: {
-            color: colors[index]
-          }
-        })),
+        name: '赊账订单',
+        type: 'pie',
+        radius: '70%',
+        avoidLabelOverlap: false,
+        itemStyle: {
+          borderRadius: 10,
+          borderColor: '#fff',
+          borderWidth: 2
+        },
         label: {
           show: true,
-          position: 'top',
-          formatter: '¥{c}'
-        }
+          formatter: '{b}\n¥{c}\n({d}%)'
+        },
+        emphasis: {
+          label: {
+            show: true,
+            fontSize: 16,
+            fontWeight: 'bold'
+          }
+        },
+        data: pieData
       }
     ]
   })
@@ -817,13 +686,21 @@ function downloadChart(chartType) {
   let filename = ''
   
   switch (chartType) {
-    case 'industryChart':
-      chart = industryChart
-      filename = '按行业统计'
+    case 'salesByIndustryChart':
+      chart = salesByIndustryChart
+      filename = '按行业销售额统计'
       break
-    case 'employChart':
-      chart = employChart
-      filename = '按雇佣分类统计'
+    case 'customerRankingChart':
+      chart = customerRankingChart
+      filename = '客户销售总额排名'
+      break
+    case 'cashByIndustryChart':
+      chart = cashByIndustryChart
+      filename = '现金订单统计'
+      break
+    case 'creditByIndustryChart':
+      chart = creditByIndustryChart
+      filename = '赊账订单统计'
       break
   }
   
@@ -867,11 +744,10 @@ function handleDateChange(dates) {
 
 // 窗口大小变化时重新调整图表
 function handleResize() {
-  if (industryChart) industryChart.resize()
-  if (sculptTop5Chart) sculptTop5Chart.resize()
-  if (advertTop5Chart) advertTop5Chart.resize()
-  if (employChart) employChart.resize()
-  if (workerTop10Chart) workerTop10Chart.resize()
+  if (salesByIndustryChart) salesByIndustryChart.resize()
+  if (customerRankingChart) customerRankingChart.resize()
+  if (cashByIndustryChart) cashByIndustryChart.resize()
+  if (creditByIndustryChart) creditByIndustryChart.resize()
 }
 
 onMounted(() => {
@@ -898,25 +774,21 @@ onMounted(() => {
 
 onUnmounted(() => {
   // 销毁图表实例
-  if (industryChart) {
-    industryChart.dispose()
-    industryChart = null
+  if (salesByIndustryChart) {
+    salesByIndustryChart.dispose()
+    salesByIndustryChart = null
   }
-  if (sculptTop5Chart) {
-    sculptTop5Chart.dispose()
-    sculptTop5Chart = null
+  if (customerRankingChart) {
+    customerRankingChart.dispose()
+    customerRankingChart = null
   }
-  if (advertTop5Chart) {
-    advertTop5Chart.dispose()
-    advertTop5Chart = null
+  if (cashByIndustryChart) {
+    cashByIndustryChart.dispose()
+    cashByIndustryChart = null
   }
-  if (employChart) {
-    employChart.dispose()
-    employChart = null
-  }
-  if (workerTop10Chart) {
-    workerTop10Chart.dispose()
-    workerTop10Chart = null
+  if (creditByIndustryChart) {
+    creditByIndustryChart.dispose()
+    creditByIndustryChart = null
   }
   
   // 移除事件监听
@@ -926,3 +798,4 @@ onUnmounted(() => {
 
 <style scoped>
 </style>
+

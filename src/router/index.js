@@ -9,6 +9,7 @@ import OrderOutbound from '../views/order_outbound.vue'
 import OrderOutboundList from '../views/order_list.vue'
 import OrderItemsList from '../views/order_items_list.vue'
 import OrderFee from '../views/order_fee.vue'
+import UserRecharge from '../views/user_recharge.vue'
 import UserList from '../views/user_list.vue'
 import UserEdit from '../views/user_edit.vue'
 import UserDetail from '../views/user_detail.vue'
@@ -32,6 +33,7 @@ const routes = [
   { path: '/stock/outbound/list', component: OrderOutboundList, meta: { title: '操作列表' } },
   { path: '/stock/items/list', component: OrderItemsList, meta: { title: '库存明细' } },
   { path: '/stock/inbound', component: OrderInbound },
+  { path: '/user/recharge', component: UserRecharge, meta: { title: '会员充值' } },
   { path: '/stock/fee', component: OrderFee, meta: { title: '其它费用' } },
   { path: '/user/list', component: UserList },
   { path: '/user/edit', component: UserEdit },

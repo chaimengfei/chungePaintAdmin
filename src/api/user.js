@@ -45,3 +45,12 @@ export function deleteUser(id) {
     method: 'delete'
   })
 }
+
+// 用户充值
+export function rechargeUser(data) {
+  return request({
+    url: '/user/recharge',
+    method: 'post',
+    data
+  })
+}

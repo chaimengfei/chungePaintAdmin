@@ -1,7 +1,6 @@
 <template>
   <div>
     <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
-      <h2>订单大盘</h2>
       <div style="display: flex; align-items: center; gap: 16px;">
         <!-- 店铺筛选 -->
         <div style="display: flex; align-items: center; gap: 8px;">

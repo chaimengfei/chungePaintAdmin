@@ -14,12 +14,14 @@ import UserEdit from '../views/user_edit.vue'
 import UserDetail from '../views/user_detail.vue'
 import AddressList from '../views/address_list.vue'
 import Login from '../views/login.vue'
-import Dashboard from '../views/dashboard.vue'
+import OrderDashboard from '../views/order_dashboard.vue'
+import FinancialDashboard from '../views/financial_dashboard.vue'
 
 const routes = [
-  { path: '/', redirect: '/dashboard' },
+  { path: '/', redirect: '/order/dashboard' },
   { path: '/login', component: Login },
-  { path: '/dashboard', component: Dashboard },
+  { path: '/order/dashboard', component: OrderDashboard },
+  { path: '/financial/dashboard', component: FinancialDashboard },
   { path: '/goods', component: GoodsList },
   { path: '/goods/add', component: GoodsAdd },
   { path: '/goods/edit', component: GoodsEdit },

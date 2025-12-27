@@ -12,3 +12,15 @@ export function getDashboardOrders(params) {
   return request(config)
 }
 
+// 获取财务收支数据
+export function getDashboardFinancial(params) {
+  const config = {
+    url: '/dashboard/financial',
+    method: 'get',
+    params,
+    timeout: 10000
+  }
+
+  return request(config)
+}
+

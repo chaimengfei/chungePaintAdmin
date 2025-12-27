@@ -8,9 +8,6 @@
   <el-container v-else style="height: 100vh">
     <el-aside width="200px" style="background:#f2f2f2">
       <el-menu router :default-active="$route.path" :collapse="false" style="border-right: none;">
-        <el-menu-item index="/dashboard">
-          <span style="font-weight: 500;">首页大盘</span>
-        </el-menu-item>
         <el-sub-menu index="goods">
           <template #title>
             <span style="font-weight: 500;">商品管理</span>
@@ -35,6 +32,13 @@
           </template>
           <el-menu-item index="/user/list">用户列表</el-menu-item>
           <el-menu-item index="/address/list">地址列表</el-menu-item>
+        </el-sub-menu>
+        <el-sub-menu index="dashboard">
+          <template #title>
+            <span style="font-weight: 500;">数据大盘</span>
+          </template>
+          <el-menu-item index="/order/dashboard">销售统计</el-menu-item>
+          <el-menu-item index="/financial/dashboard">收支统计</el-menu-item>
         </el-sub-menu>
       </el-menu>
     </el-aside>

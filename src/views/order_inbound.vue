@@ -14,7 +14,7 @@ const batchForm = reactive({
   items: [{ 
     product_id: '', 
     cost_per_unit: 0,  // 进价
-    quantity: '', 
+    quantity: 1, 
     goods_total_amount: 0,  // 货物总金额
     product_name: '',
     unit: '',
@@ -146,7 +146,7 @@ function addBatchItem() {
   batchForm.items.push({ 
     product_id: '', 
     cost_per_unit: 0,  // 进价
-    quantity: '', 
+    quantity: 1, 
     goods_total_amount: 0,  // 货物总金额
     product_name: '',
     unit: '',
@@ -526,7 +526,15 @@ onMounted(() => {
               </div>
               <div class="form-group">
                 <label>数量</label>
-                <el-input v-model.number="item.quantity" type="number" min="1" placeholder="请输入数量" @input="calculateCosts(item)" />
+                <el-input-number
+                  v-model="item.quantity"
+                  :min="0.1"
+                  :precision="1"
+                  :step="0.1"
+                  placeholder="请输入数量"
+                  style="width: 100%;"
+                  @change="calculateCosts(item)"
+                />
               </div>
               <div class="form-group">
                 <label>金额</label>

@@ -12,7 +12,7 @@ const router = useRouter()
 const batchForm = reactive({
   items: [{ 
     product_id: '', 
-    quantity: '', 
+    quantity: 1, 
     unit_price: 0,
     default_price: 0,
     total_price: 0,
@@ -156,7 +156,7 @@ function handleShopChange(shopId) {
 function addBatchItem() {
   batchForm.items.push({ 
     product_id: '', 
-    quantity: '', 
+    quantity: 1, 
     unit_price: 0,
     default_price: 0,
     total_price: 0,
@@ -341,7 +341,7 @@ function resetForm() {
   batchForm.remark = ''
   batchForm.items = [{ 
     product_id: '', 
-    quantity: '', 
+    quantity: 1, 
     unit_price: 0,
     default_price: 0,
     total_price: 0,
@@ -615,8 +615,8 @@ onMounted(() => {
                 <label>数量</label>
                 <el-input-number
                   v-model="item.quantity"
-                  :min="0.01"
-                  :precision="2"
+                  :min="0.1"
+                  :precision="1"
                   :step="0.1"
                   placeholder="请输入数量"
                   style="width: 100%;"

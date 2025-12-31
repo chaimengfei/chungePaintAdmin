@@ -131,8 +131,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { ArrowRight } from '@element-plus/icons-vue'
-import { getStockItemsList } from '../api/order'
-import { getProductList } from '../api/order'
+import { getStockItemsList, getProductNameList } from '../api/order'
 
 const stockItemsList = ref([])
 const loading = ref(false)
@@ -218,11 +217,7 @@ function handleReset() {
 
 // 加载商品列表
 function loadProductList() {
-  const params = {
-    page: 1,
-    page_size: 1000, // 获取所有商品用于筛选
-    only_name: true
-  }
+  const params = {}
   
   // 添加店铺ID参数
   if (isRoot.value && selectedShopId.value) {
@@ -231,9 +226,10 @@ function loadProductList() {
     params.shop_id = shopInfo.value.id
   }
   
-  getProductList(params).then(res => {
+  getProductNameList(params).then(res => {
     if (res.code === 0) {
-      productList.value = res.data.list || []
+      // 新 API 返回的数据格式是 data 数组，而不是 data.list
+      productList.value = res.data || []
     } else {
       ElMessage.error(res.message || '获取商品列表失败')
     }

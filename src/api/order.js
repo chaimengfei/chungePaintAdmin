@@ -24,6 +24,11 @@ export function getProductList(params = {}) {
   return request.get('/product/list', { params: requestParams })
 }
 
+// 获取商品名称列表（仅返回 id 和 name）
+export function getProductNameList(params = {}) {
+  return request.get('/product/name', { params })
+}
+
 export function getProductDetail(id) {
   return request.get(`/product/${id}`)
 }

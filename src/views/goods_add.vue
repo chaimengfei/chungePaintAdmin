@@ -23,6 +23,7 @@
                 v-model="form.shop_id" 
                 placeholder="请选择店铺" 
                 style="width: 100%;"
+                @change="handleShopChange"
               >
                 <el-option
                   v-for="shop in shopList"
@@ -255,13 +256,14 @@
 </style>
 
 <script setup>
-import { ref, reactive, onMounted, nextTick } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Plus, QuestionFilled, Loading } from '@element-plus/icons-vue'
 import { getCategoryList } from '../api/category'
 import { addProduct } from '../api/order'
 import { uploadToOSS, validateFile } from '../utils/ossUpload'
+import { getCurrentShopId } from '../utils/shop'
 
 const router = useRouter()
 const categories = ref([])
@@ -383,9 +385,40 @@ function calculateTotalCost() {
   })
 }
 
+// 处理店铺切换（表单内的店铺选择器）
+function handleShopChange() {
+  // 只有 root 用户才需要同步到右上角（普通账号右上角是固定的，不会变化）
+  if (isRoot.value && form.shop_id) {
+    localStorage.setItem('selected_shop_id', form.shop_id.toString())
+    // 触发全局事件，通知其他组件店铺已切换
+    window.dispatchEvent(new CustomEvent('shopChanged', { detail: { shopId: form.shop_id } }))
+  }
+  // 切换店铺时，清空分类选择并重新加载分类列表
+  form.category_id = ''
+  loadCategories()
+}
+
+// 处理右上角店铺切换（全局事件）
+function handleGlobalShopChange(event) {
+  const shopId = event.detail.shopId
+  // 更新表单中的店铺ID
+  form.shop_id = shopId
+  // 清空分类选择并重新加载分类列表
+  form.category_id = ''
+  loadCategories()
+}
+
 // 加载分类列表
 function loadCategories() {
-  getCategoryList().then(res => {
+  const params = {}
+  
+  // 使用当前选择的店铺ID（优先使用右上角选择的店铺ID）
+  const currentShopId = getCurrentShopId()
+  if (currentShopId) {
+    params.shop_id = currentShopId
+  }
+  
+  getCategoryList(params).then(res => {
     if (res.code === 0) {
       categories.value = res.data || []
     } else {
@@ -438,7 +471,6 @@ function loadUserInfo() {
   if (shop && shop !== 'null') {
     try {
       shopInfo.value = JSON.parse(shop)
-      form.shop_id = shopInfo.value.id
     } catch (error) {
       console.error('解析店铺信息失败:', error)
     }
@@ -447,12 +479,22 @@ function loadUserInfo() {
   if (shops && shops !== 'null') {
     try {
       shopList.value = JSON.parse(shops)
-      if (isRoot.value && shopList.value.length > 0) {
-        form.shop_id = shopList.value[0].id
-      }
     } catch (error) {
       console.error('解析店铺列表失败:', error)
     }
+  }
+  
+  // 使用工具函数获取当前店铺ID（优先使用右上角选择的店铺ID）
+  const currentShopId = getCurrentShopId()
+  if (currentShopId) {
+    form.shop_id = currentShopId
+  } else if (!isRoot.value && shopInfo.value) {
+    // 普通管理员使用 shop_info，并确保 selected_shop_id 与 shop_info.id 一致
+    form.shop_id = shopInfo.value.id
+    localStorage.setItem('selected_shop_id', shopInfo.value.id.toString())
+  } else if (isRoot.value && shopList.value.length > 0) {
+    // root用户如果没有选择，使用第一个店铺
+    form.shop_id = shopList.value[0].id
   }
 }
 
@@ -460,6 +502,14 @@ onMounted(() => {
   loadUserInfo()
   loadCategories()
   calculateTotalCost() // 初始化时计算一次成本
+  
+  // 监听全局店铺切换事件（右上角店铺切换）
+  window.addEventListener('shopChanged', handleGlobalShopChange)
+})
+
+onUnmounted(() => {
+  // 移除事件监听
+  window.removeEventListener('shopChanged', handleGlobalShopChange)
 })
 </script>
 

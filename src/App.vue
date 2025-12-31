@@ -132,9 +132,22 @@ function loadUserInfo() {
   if (shops && shops !== 'null') {
     try {
       shopList.value = JSON.parse(shops)
-      // 如果是root用户且有店铺列表，默认选择第一个店铺
+      // 如果是root用户且有店铺列表，优先使用 localStorage 中保存的选择，否则默认选择第一个店铺
       if (isRoot.value && shopList.value.length > 0) {
-        selectedShopId.value = shopList.value[0].id
+        const savedShopId = localStorage.getItem('selected_shop_id')
+        if (savedShopId) {
+          const shopId = parseInt(savedShopId)
+          // 验证保存的店铺ID是否在店铺列表中
+          if (shopList.value.find(shop => shop.id === shopId)) {
+            selectedShopId.value = shopId
+          } else {
+            selectedShopId.value = shopList.value[0].id
+            localStorage.setItem('selected_shop_id', selectedShopId.value.toString())
+          }
+        } else {
+          selectedShopId.value = shopList.value[0].id
+          localStorage.setItem('selected_shop_id', selectedShopId.value.toString())
+        }
       }
     } catch (error) {
       console.error('解析店铺列表失败:', error)
@@ -147,6 +160,8 @@ function loadUserInfo() {
 // 处理店铺切换
 function handleShopChange(shopId) {
   selectedShopId.value = shopId
+  // 保存到 localStorage，供其他页面使用
+  localStorage.setItem('selected_shop_id', shopId.toString())
   // 触发全局事件，通知其他组件店铺已切换
   window.dispatchEvent(new CustomEvent('shopChanged', { detail: { shopId } }))
 }

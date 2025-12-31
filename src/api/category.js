@@ -1,10 +1,11 @@
 import request from './request'
 
 // 获取商品分类列表
-export function getCategoryList() {
+export function getCategoryList(params = {}) {
   return request({
     url: '/product/categories',
-    method: 'get'
+    method: 'get',
+    params
   })
 }
 

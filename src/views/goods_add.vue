@@ -327,7 +327,7 @@ const rules = {
     { required: true, message: '请选择状态', trigger: 'change' }
   ],
   image: [
-    { required: true, message: '请选择图片', trigger: 'change' }
+    // 图片为可选字段，不需要必填验证
   ]
 }
 
@@ -442,13 +442,17 @@ function handleSubmit() {
           ElMessage.success('商品添加成功')
           router.push('/goods')
         } else {
-          console.log('错误信息:', res.message) // 添加调试信息
-          ElMessage.error(res.message || '商品添加失败')
+          // 当 code 为 -1 或其他错误码时，显示后端返回的 message
+          const errorMessage = res.message || '商品添加失败'
+          console.log('错误信息:', errorMessage) // 添加调试信息
+          ElMessage.error(errorMessage)
         }
         submitLoading.value = false
       }).catch((error) => {
         console.log('网络错误:', error) // 添加调试信息
-        ElMessage.error('网络错误，请稍后重试')
+        // 如果 catch 中也有错误信息，优先显示
+        const errorMessage = error?.response?.data?.message || error?.message || '网络错误，请稍后重试'
+        ElMessage.error(errorMessage)
         submitLoading.value = false
       })
     }

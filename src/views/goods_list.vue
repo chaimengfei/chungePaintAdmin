@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { getProductList, deleteProduct } from '../api/order'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { QuestionFilled, Plus } from '@element-plus/icons-vue'
+import { getCurrentShopId } from '../utils/shop'
 
 const router = useRouter()
 const goods = ref([])
@@ -46,8 +47,16 @@ function loadUserInfo() {
     try {
       shopList.value = JSON.parse(shops)
       if (isRoot.value && shopList.value.length > 0) {
-        selectedShopId.value = shopList.value[0].id
-        query.shop_id = selectedShopId.value
+        // 优先使用右上角选择的店铺ID
+        const currentShopId = getCurrentShopId()
+        if (currentShopId) {
+          selectedShopId.value = currentShopId
+          query.shop_id = currentShopId
+        } else {
+          // 如果没有，使用第一个店铺
+          selectedShopId.value = shopList.value[0].id
+          query.shop_id = selectedShopId.value
+        }
       }
     } catch (error) {
       console.error('解析店铺列表失败:', error)

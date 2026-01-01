@@ -63,25 +63,25 @@
       <!-- 用户表格 -->
       <el-table :data="userList" style="width: 100%" v-loading="loading" border>
         <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="admin_display_name" label="用户名" width="150" />
-        <el-table-column prop="mobile_phone" label="手机号" width="150" />
-        <el-table-column label="所属店铺" width="120">
+        <el-table-column label="用户名" width="150">
           <template #default="scope">
-            <el-tag :type="scope.row.shop_id === 1 ? 'primary' : 'success'">
-              {{ scope.row.shop_id === 1 ? '燕郊店' : '涞水店' }}
-            </el-tag>
+            <span v-if="scope.row.wechat_name">
+              {{ scope.row.wechat_name }}{{ scope.row.admin_display_name ? ` (${scope.row.admin_display_name})` : '' }}
+            </span>
+            <span v-else>{{ scope.row.admin_display_name || '-' }}</span>
           </template>
         </el-table-column>
+        <el-table-column prop="mobile_phone" label="手机号" width="150" />
         <el-table-column label="来源" width="100">
           <template #default="scope">
-            <el-tag :type="scope.row.source === 1 ? 'success' : 'primary'">
+            <el-tag :type="scope.row.source === 1 ? 'warning' : 'primary'">
               {{ scope.row.source === 1 ? '小程序' : '后台添加' }}
             </el-tag>
           </template>
         </el-table-column>
         <el-table-column label="微信绑定" width="100">
           <template #default="scope">
-            <el-tag :type="scope.row.has_wechat_bind === 1 ? 'success' : 'info'">
+            <el-tag :type="scope.row.has_wechat_bind === 1 ? 'primary' : 'info'">
               {{ scope.row.has_wechat_bind === 1 ? '已绑定' : '未绑定' }}
             </el-tag>
           </template>
@@ -98,12 +98,14 @@
             {{ formatDateTime(scope.row.created_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="280" fixed="right">
+        <el-table-column label="操作" width="320" fixed="right">
           <template #default="scope">
-            <el-button type="info" size="small" @click="viewUserDetail(scope.row)">查看详情</el-button>
-            <el-button type="primary" size="small" @click="viewUserAddress(scope.row)">查看地址</el-button>
-            <el-button type="warning" size="small" @click="editUser(scope.row)">编辑</el-button>
-            <el-button type="danger" size="small" @click="deleteUser(scope.row)">删除</el-button>
+            <div style="display: flex; gap: 8px; flex-wrap: nowrap;">
+              <el-button type="info" size="small" @click="viewUserDetail(scope.row)">查看</el-button>
+              <el-button type="warning" size="small" @click="editUser(scope.row)">编辑</el-button>
+              <el-button type="danger" size="small" @click="deleteUser(scope.row)">删除</el-button>
+              <el-button type="primary" size="small" @click="viewUserAddress(scope.row)">地址信息</el-button>
+            </div>
           </template>
         </el-table-column>
       </el-table>

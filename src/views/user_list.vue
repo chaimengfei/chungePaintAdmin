@@ -36,10 +36,10 @@
         
         <!-- 用户搜索 -->
         <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="color: #606266; white-space: nowrap;">搜索：</span>
+          <span style="color: #606266; white-space: nowrap;">用户名：</span>
           <el-input
             v-model="searchKeyword"
-            placeholder="请输入用户姓名或手机号"
+            placeholder="请输入用户名"
             style="width: 200px;"
             clearable
             @keyup.enter="loadUserList"
@@ -420,7 +420,7 @@ function loadUserList() {
   const params = {
     page: currentPage.value,
     page_size: pageSize.value,
-    keyword: searchKeyword.value
+    name: searchKeyword.value
   }
   
   // 添加店铺ID参数（优先使用右上角选择的店铺ID）

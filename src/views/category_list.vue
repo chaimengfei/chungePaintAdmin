@@ -115,10 +115,11 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, QuestionFilled } from '@element-plus/icons-vue'
 import { getCategoryList, addCategory, editCategory, deleteCategory } from '../api/category'
+import { getCurrentShopId } from '../utils/shop'
 
 const categories = ref([])
 const loading = ref(false)
@@ -176,9 +177,16 @@ function loadUserInfo() {
     try {
       shopList.value = JSON.parse(shops)
       if (isRoot.value && shopList.value.length > 0) {
-        selectedShopId.value = shopList.value[0].id
-        // Root用户设置默认店铺ID
-        form.shop_id = shopList.value[0].id
+        // 优先使用右上角选择的店铺ID
+        const currentShopId = getCurrentShopId()
+        if (currentShopId) {
+          selectedShopId.value = currentShopId
+          form.shop_id = currentShopId
+        } else {
+          // 如果没有，使用第一个店铺
+          selectedShopId.value = shopList.value[0].id
+          form.shop_id = shopList.value[0].id
+        }
       }
     } catch (error) {
       console.error('解析店铺列表失败:', error)
@@ -197,8 +205,21 @@ function getCurrentShopName() {
   return '未知店铺'
 }
 
-// 处理店铺切换
+// 处理店铺切换（页面内店铺选择器）
 function handleShopChange(shopId) {
+  selectedShopId.value = shopId
+  // 同步到右上角（保存到 localStorage）
+  if (isRoot.value && shopId) {
+    localStorage.setItem('selected_shop_id', shopId.toString())
+    // 触发全局事件，通知其他组件店铺已切换
+    window.dispatchEvent(new CustomEvent('shopChanged', { detail: { shopId } }))
+  }
+  loadCategories()
+}
+
+// 处理右上角店铺切换（全局事件）
+function handleGlobalShopChange(event) {
+  const shopId = event.detail.shopId
   selectedShopId.value = shopId
   loadCategories()
 }
@@ -209,7 +230,11 @@ function loadCategories() {
   
   // 构建请求参数
   const params = {}
-  if (isRoot.value && selectedShopId.value) {
+  // 使用当前选择的店铺ID（优先使用右上角选择的店铺ID）
+  const currentShopId = getCurrentShopId()
+  if (currentShopId) {
+    params.shop_id = currentShopId
+  } else if (isRoot.value && selectedShopId.value) {
     params.shop_id = selectedShopId.value
   } else if (!isRoot.value && shopInfo.value) {
     params.shop_id = shopInfo.value.id
@@ -244,8 +269,11 @@ function showEditDialog(row) {
   dialogVisible.value = true
   form.name = row.name
   form.sort_order = row.sort_order
-  // 设置店铺ID
-  if (isRoot.value && selectedShopId.value) {
+  // 设置店铺ID（优先使用右上角选择的店铺ID）
+  const currentShopId = getCurrentShopId()
+  if (currentShopId) {
+    form.shop_id = currentShopId
+  } else if (isRoot.value && selectedShopId.value) {
     form.shop_id = selectedShopId.value
   } else if (!isRoot.value && shopInfo.value) {
     form.shop_id = shopInfo.value.id
@@ -256,8 +284,11 @@ function showEditDialog(row) {
 function resetForm() {
   form.name = ''
   form.sort_order = 100
-  // 重置店铺ID为当前用户的默认店铺
-  if (isRoot.value && shopList.value.length > 0) {
+  // 重置店铺ID为当前选择的店铺（优先使用右上角选择的店铺ID）
+  const currentShopId = getCurrentShopId()
+  if (currentShopId) {
+    form.shop_id = currentShopId
+  } else if (isRoot.value && shopList.value.length > 0) {
     form.shop_id = selectedShopId.value || shopList.value[0].id
   } else if (!isRoot.value && shopInfo.value) {
     form.shop_id = shopInfo.value.id
@@ -330,12 +361,13 @@ onMounted(() => {
   loadUserInfo()
   loadCategories()
   
-  // 监听全局店铺切换事件
-  window.addEventListener('shopChanged', (event) => {
-    if (isRoot.value) {
-      handleShopChange(event.detail.shopId)
-    }
-  })
+  // 监听全局店铺切换事件（右上角店铺切换）
+  window.addEventListener('shopChanged', handleGlobalShopChange)
+})
+
+onUnmounted(() => {
+  // 移除事件监听
+  window.removeEventListener('shopChanged', handleGlobalShopChange)
 })
 </script>
 

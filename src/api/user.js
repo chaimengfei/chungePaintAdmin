@@ -54,3 +54,12 @@ export function rechargeUser(data) {
     data
   })
 }
+
+// 获取用户名称列表（仅返回 id、admin_display_name 和 wechat_name）
+export function getUserNameList(params = {}) {
+  return request({
+    url: '/user/name',
+    method: 'get',
+    params
+  })
+}

@@ -34,26 +34,24 @@
           />
         </div>
         
-        <!-- 用户ID搜索 -->
+        <!-- 用户选择 -->
         <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="color: #606266; white-space: nowrap;">用户ID：</span>
-          <el-input
+          <span style="color: #606266; white-space: nowrap;">用户：</span>
+          <el-select
             v-model="searchForm.user_id"
-            placeholder="请输入用户ID"
-            style="width: 150px;"
+            placeholder="请选择用户"
+            style="width: 200px;"
+            filterable
             clearable
-          />
-        </div>
-        
-        <!-- 用户姓名搜索 -->
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="color: #606266; white-space: nowrap;">用户姓名：</span>
-          <el-input
-            v-model="searchForm.user_name"
-            placeholder="请输入用户姓名"
-            style="width: 150px;"
-            clearable
-          />
+            @change="handleUserChange"
+          >
+            <el-option
+              v-for="user in userList"
+              :key="user.id"
+              :label="getUserNameLabel(user)"
+              :value="user.id"
+            />
+          </el-select>
         </div>
         
         <!-- 操作按钮 -->
@@ -351,17 +349,19 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { getAddressList, addAddress, editAddress as editAddressApi, deleteAddress as deleteAddressApi } from '../api/address'
+import { getCurrentShopId } from '../utils/shop'
+import { getUserNameList } from '../api/user'
 
 const route = useRoute()
 const addressList = ref([])
 const loading = ref(false)
 const currentPage = ref(1)
-const pageSize = ref(20)
+const pageSize = ref(10)
 const total = ref(0)
 
 // 用户权限相关
@@ -369,6 +369,9 @@ const isRoot = ref(false)
 const shopInfo = ref(null)
 const shopList = ref([])
 const selectedShopId = ref(null)
+
+// 用户列表（用于下拉框）
+const userList = ref([])
 
 // 加载用户权限信息
 function loadUserInfo() {
@@ -390,7 +393,14 @@ function loadUserInfo() {
     try {
       shopList.value = JSON.parse(shops)
       if (isRoot.value && shopList.value.length > 0) {
-        selectedShopId.value = shopList.value[0].id
+        // 优先使用右上角选择的店铺ID
+        const currentShopId = getCurrentShopId()
+        if (currentShopId) {
+          selectedShopId.value = currentShopId
+        } else {
+          // 如果没有，使用第一个店铺
+          selectedShopId.value = shopList.value[0].id
+        }
       }
     } catch (error) {
       console.error('解析店铺列表失败:', error)
@@ -409,17 +419,84 @@ function getCurrentShopName() {
   return '未知店铺'
 }
 
-// 处理店铺切换
+// 处理店铺切换（页面内店铺选择器）
 function handleShopChange(shopId) {
   selectedShopId.value = shopId
+  // 同步到右上角（保存到 localStorage）
+  if (isRoot.value && shopId) {
+    localStorage.setItem('selected_shop_id', shopId.toString())
+    // 触发全局事件，通知其他组件店铺已切换
+    window.dispatchEvent(new CustomEvent('shopChanged', { detail: { shopId } }))
+  }
+  currentPage.value = 1 // 重置到第一页
+  loadUserList() // 重新加载用户列表
+  loadAddressList()
+}
+
+// 处理右上角店铺切换（全局事件）
+function handleGlobalShopChange(event) {
+  const shopId = event.detail.shopId
+  selectedShopId.value = shopId
+  currentPage.value = 1 // 重置到第一页
+  loadUserList() // 重新加载用户列表
+  loadAddressList()
+}
+
+// 加载用户列表（用于下拉框）
+function loadUserList() {
+  const params = {}
+  
+  // 使用当前选择的店铺ID（优先使用右上角选择的店铺ID）
+  const currentShopId = getCurrentShopId()
+  if (currentShopId) {
+    params.shop_id = currentShopId
+  } else if (isRoot.value && selectedShopId.value) {
+    params.shop_id = selectedShopId.value
+  } else if (!isRoot.value && shopInfo.value) {
+    params.shop_id = shopInfo.value.id
+  }
+  
+  getUserNameList(params).then(res => {
+    if (res.code === 0) {
+      userList.value = res.data || []
+    } else {
+      ElMessage.error(res.message || '获取用户列表失败')
+    }
+  }).catch((error) => {
+    console.log('获取用户列表错误:', error)
+    ElMessage.error('网络错误，请稍后重试')
+  })
+}
+
+// 获取用户显示名称
+function getUserNameLabel(user) {
+  const hasWechatName = user.wechat_name && user.wechat_name.trim() !== ''
+  const hasAdminName = user.admin_display_name && user.admin_display_name.trim() !== ''
+  
+  if (hasWechatName && hasAdminName) {
+    // 两个都有值，显示 wechat_name (admin_display_name)
+    return `${user.wechat_name} (${user.admin_display_name})`
+  } else if (hasWechatName) {
+    // 只有 wechat_name 有值
+    return user.wechat_name
+  } else if (hasAdminName) {
+    // 只有 admin_display_name 有值
+    return user.admin_display_name
+  } else {
+    // 两个都没有值，显示用户ID
+    return `用户${user.id}`
+  }
+}
+
+// 处理用户切换
+function handleUserChange() {
   currentPage.value = 1 // 重置到第一页
   loadAddressList()
 }
 
 // 搜索表单
 const searchForm = reactive({
-  user_id: '',
-  user_name: ''
+  user_id: ''
 })
 
 // 新增地址相关
@@ -493,8 +570,11 @@ function loadAddressList() {
     page_size: pageSize.value
   }
   
-  // 添加店铺ID参数
-  if (isRoot.value && selectedShopId.value) {
+  // 添加店铺ID参数（优先使用右上角选择的店铺ID）
+  const currentShopId = getCurrentShopId()
+  if (currentShopId) {
+    params.shop_id = currentShopId
+  } else if (isRoot.value && selectedShopId.value) {
     params.shop_id = selectedShopId.value
   } else if (!isRoot.value && shopInfo.value) {
     params.shop_id = shopInfo.value.id
@@ -502,9 +582,6 @@ function loadAddressList() {
   
   if (searchForm.user_id) {
     params.user_id = searchForm.user_id
-  }
-  if (searchForm.user_name) {
-    params.user_name = searchForm.user_name
   }
   
   getAddressList(params).then(res => {
@@ -525,7 +602,6 @@ function loadAddressList() {
 // 重置搜索
 function resetSearch() {
   searchForm.user_id = ''
-  searchForm.user_name = ''
   currentPage.value = 1
   loadAddressList()
 }
@@ -533,12 +609,14 @@ function resetSearch() {
 // 显示新增地址弹窗
 function showAddDialog() {
   addDialogVisible.value = true
-  // 重置表单并设置店铺ID
-  let shopId = null
-  if (isRoot.value && selectedShopId.value) {
-    shopId = selectedShopId.value
-  } else if (!isRoot.value && shopInfo.value) {
-    shopId = shopInfo.value.id
+  // 重置表单并设置店铺ID（优先使用右上角选择的店铺ID）
+  let shopId = getCurrentShopId()
+  if (!shopId) {
+    if (isRoot.value && selectedShopId.value) {
+      shopId = selectedShopId.value
+    } else if (!isRoot.value && shopInfo.value) {
+      shopId = shopInfo.value.id
+    }
   }
   
   Object.assign(addForm, {
@@ -584,12 +662,14 @@ function submitAddForm() {
 function editAddress(address) {
   editDialogVisible.value = true
   
-  // 设置店铺ID
-  let shopId = null
-  if (isRoot.value && selectedShopId.value) {
-    shopId = selectedShopId.value
-  } else if (!isRoot.value && shopInfo.value) {
-    shopId = shopInfo.value.id
+  // 设置店铺ID（优先使用地址原有的 shop_id，如果没有则使用右上角选择的店铺ID）
+  let shopId = address.shop_id || getCurrentShopId()
+  if (!shopId) {
+    if (isRoot.value && selectedShopId.value) {
+      shopId = selectedShopId.value
+    } else if (!isRoot.value && shopInfo.value) {
+      shopId = shopInfo.value.id
+    }
   }
   
   Object.assign(editForm, {
@@ -687,23 +767,22 @@ function handleCurrentChange(val) {
 
 onMounted(() => {
   loadUserInfo()
+  loadUserList() // 加载用户列表
   
   // 检查URL参数，如果有用户信息则自动填充搜索条件
   if (route.query.user_id) {
     searchForm.user_id = route.query.user_id
   }
-  if (route.query.user_name) {
-    searchForm.user_name = route.query.user_name
-  }
   
   loadAddressList()
   
-  // 监听全局店铺切换事件
-  window.addEventListener('shopChanged', (event) => {
-    if (isRoot.value) {
-      handleShopChange(event.detail.shopId)
-    }
-  })
+  // 监听全局店铺切换事件（右上角店铺切换）
+  window.addEventListener('shopChanged', handleGlobalShopChange)
+})
+
+onUnmounted(() => {
+  // 移除事件监听
+  window.removeEventListener('shopChanged', handleGlobalShopChange)
 })
 </script>
 

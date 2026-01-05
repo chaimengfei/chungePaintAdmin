@@ -137,23 +137,6 @@
         :rules="userFormRules"
         label-width="100px"
       >
-        <el-form-item label="用户名" prop="admin_display_name">
-          <el-input
-            v-model="addForm.admin_display_name"
-            placeholder="请输入用户名"
-            clearable
-          />
-        </el-form-item>
-        
-        <el-form-item label="手机号" prop="mobile_phone">
-          <el-input
-            v-model="addForm.mobile_phone"
-            placeholder="请输入手机号"
-            clearable
-            maxlength="11"
-          />
-        </el-form-item>
-        
         <el-form-item label="所属店铺" prop="shop_id">
           <!-- 普通管理员显示固定店铺 -->
           <el-input 
@@ -177,6 +160,38 @@
             />
           </el-select>
           <span v-else style="color: #909399;">暂无店铺信息</span>
+        </el-form-item>
+        
+        <el-form-item label="用户名" prop="admin_display_name">
+          <el-input
+            v-model="addForm.admin_display_name"
+            placeholder="请输入用户名"
+            clearable
+          />
+        </el-form-item>
+        
+        <el-form-item label="手机号" prop="mobile_phone">
+          <el-input
+            v-model="addForm.mobile_phone"
+            placeholder="请输入手机号"
+            clearable
+            maxlength="11"
+          />
+        </el-form-item>
+        
+        <el-form-item label="分类" prop="employ">
+          <el-radio-group v-model="addForm.employ" @change="handleEmployChange">
+            <el-radio :label="1">工厂</el-radio>
+            <el-radio :label="2">工人-包活</el-radio>
+            <el-radio :label="3">工人-不包活</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        
+        <el-form-item label="行业" prop="industry">
+          <el-radio-group v-model="addForm.industry" :disabled="addForm.employ !== 1">
+            <el-radio :label="1">雕塑</el-radio>
+            <el-radio :label="2">广告</el-radio>
+          </el-radio-group>
         </el-form-item>
         
         <el-form-item label="备注" prop="remark">
@@ -383,6 +398,8 @@ const addForm = reactive({
   admin_display_name: '',
   mobile_phone: '',
   shop_id: null, // 店铺ID，由权限控制设置
+  employ: null, // 雇佣分类（1:工厂, 2:工人-包活, 3:工人-不包活）
+  industry: null, // 行业（1:雕塑, 2:广告）
   remark: ''
 })
 
@@ -474,8 +491,23 @@ function showAddDialog() {
     admin_display_name: '',
     mobile_phone: '',
     shop_id: shopId,
+    employ: null,
+    industry: null,
     remark: ''
   })
+}
+
+// 处理分类变化
+function handleEmployChange(value) {
+  // 当 employ 不是 1（工厂）时，industry 自动设置为 0（默认）
+  if (value !== 1) {
+    addForm.industry = 0
+  } else {
+    // 当选择工厂时，如果 industry 是 0，则重置为 null，让用户选择
+    if (addForm.industry === 0) {
+      addForm.industry = null
+    }
+  }
 }
 
 // 提交新增表单
@@ -484,7 +516,14 @@ function submitAddForm() {
     if (valid) {
       addSubmitting.value = true
       
-      addUser(addForm).then(res => {
+      // 确保逻辑正确：当 employ 不是 1 时，industry 必须是 0
+      const submitData = {
+        ...addForm,
+        employ: addForm.employ || 0,
+        industry: addForm.employ === 1 ? (addForm.industry || 0) : 0
+      }
+      
+      addUser(submitData).then(res => {
         if (res.code === 0) {
           ElMessage.success('添加用户成功')
           addDialogVisible.value = false

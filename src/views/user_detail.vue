@@ -35,11 +35,7 @@
             </el-tag>
           </el-descriptions-item>
           <el-descriptions-item label="备注">{{ user.remark || '无' }}</el-descriptions-item>
-        </el-descriptions>
-        
-        <el-descriptions title="时间信息" :column="1" border style="margin-top: 20px;">
           <el-descriptions-item label="创建时间">{{ formatDateTime(user.created_at) }}</el-descriptions-item>
-          <el-descriptions-item label="更新时间">{{ formatDateTime(user.updated_at) }}</el-descriptions-item>
         </el-descriptions>
       </el-card>
     </div>

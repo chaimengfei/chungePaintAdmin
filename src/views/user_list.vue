@@ -93,6 +93,21 @@
             </el-tag>
           </template>
         </el-table-column>
+        <el-table-column label="分类" width="120">
+          <template #default="scope">
+            <span v-if="scope.row.employ === 1">工厂</span>
+            <span v-else-if="scope.row.employ === 2">工人-包活</span>
+            <span v-else-if="scope.row.employ === 3">工人-不包活</span>
+            <span v-else style="color: #909399;">-</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="行业" width="100">
+          <template #default="scope">
+            <span v-if="scope.row.industry === 1">雕塑</span>
+            <span v-else-if="scope.row.industry === 2">广告</span>
+            <span v-else style="color: #909399;">-</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="created_at" label="创建时间" width="180">
           <template #default="scope">
             {{ formatDateTime(scope.row.created_at) }}
@@ -259,7 +274,6 @@
             <el-radio :label="2">工人-包活</el-radio>
             <el-radio :label="3">工人-不包活</el-radio>
           </el-radio-group>
-          <span v-if="!editForm.employ || editForm.employ === 0" style="color: #909399; margin-left: 10px;">默认</span>
         </el-form-item>
         
         <el-form-item label="行业" prop="industry">
@@ -267,7 +281,6 @@
             <el-radio :label="1">雕塑</el-radio>
             <el-radio :label="2">广告</el-radio>
           </el-radio-group>
-          <span v-if="!editForm.industry || editForm.industry === 0" style="color: #909399; margin-left: 10px;">默认</span>
         </el-form-item>
         
         <el-form-item label="状态" prop="is_enable">

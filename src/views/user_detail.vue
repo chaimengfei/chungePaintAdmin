@@ -34,6 +34,17 @@
               {{ user.is_enable === 1 ? '正常' : '禁用' }}
             </el-tag>
           </el-descriptions-item>
+          <el-descriptions-item label="分类">
+            <span v-if="user.employ === 1">工厂</span>
+            <span v-else-if="user.employ === 2">工人-包活</span>
+            <span v-else-if="user.employ === 3">工人-不包活</span>
+            <span v-else style="color: #909399;">-</span>
+          </el-descriptions-item>
+          <el-descriptions-item label="行业">
+            <span v-if="user.industry === 1">雕塑</span>
+            <span v-else-if="user.industry === 2">广告</span>
+            <span v-else style="color: #909399;">-</span>
+          </el-descriptions-item>
           <el-descriptions-item label="备注">{{ user.remark || '无' }}</el-descriptions-item>
           <el-descriptions-item label="创建时间">{{ formatDateTime(user.created_at) }}</el-descriptions-item>
         </el-descriptions>

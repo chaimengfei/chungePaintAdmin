@@ -228,6 +228,14 @@
         :rules="userFormRules"
         label-width="100px"
       >
+        <el-form-item label="所属店铺" prop="shop_id">
+          <el-input 
+            :value="editForm.shop_name" 
+            disabled 
+            style="width: 100%;"
+          />
+        </el-form-item>
+        
         <el-form-item label="用户名" prop="admin_display_name">
           <el-input
             v-model="editForm.admin_display_name"
@@ -240,34 +248,26 @@
           <el-input
             v-model="editForm.mobile_phone"
             placeholder="请输入手机号"
-            clearable
+            disabled
             maxlength="11"
           />
         </el-form-item>
         
-        <el-form-item label="所属店铺" prop="shop_id">
-          <!-- 普通管理员显示固定店铺 -->
-          <el-input 
-            v-if="!isRoot && shopInfo" 
-            :value="shopInfo.name" 
-            disabled 
-            style="width: 100%;"
-          />
-          <!-- Root用户显示店铺选择器 -->
-          <el-select 
-            v-else-if="isRoot && shopList.length > 0"
-            v-model="editForm.shop_id" 
-            placeholder="请选择店铺" 
-            style="width: 100%;"
-          >
-            <el-option
-              v-for="shop in shopList"
-              :key="shop.id"
-              :label="shop.name"
-              :value="shop.id"
-            />
-          </el-select>
-          <span v-else style="color: #909399;">暂无店铺信息</span>
+        <el-form-item label="分类" prop="employ">
+          <el-radio-group v-model="editForm.employ" disabled>
+            <el-radio :label="1">工厂</el-radio>
+            <el-radio :label="2">工人-包活</el-radio>
+            <el-radio :label="3">工人-不包活</el-radio>
+          </el-radio-group>
+          <span v-if="!editForm.employ || editForm.employ === 0" style="color: #909399; margin-left: 10px;">默认</span>
+        </el-form-item>
+        
+        <el-form-item label="行业" prop="industry">
+          <el-radio-group v-model="editForm.industry" disabled>
+            <el-radio :label="1">雕塑</el-radio>
+            <el-radio :label="2">广告</el-radio>
+          </el-radio-group>
+          <span v-if="!editForm.industry || editForm.industry === 0" style="color: #909399; margin-left: 10px;">默认</span>
         </el-form-item>
         
         <el-form-item label="状态" prop="is_enable">
@@ -412,6 +412,9 @@ const editForm = reactive({
   admin_display_name: '',
   mobile_phone: '',
   shop_id: null,
+  shop_name: '', // 店铺名称（只读显示）
+  employ: null, // 雇佣分类（1:工厂, 2:工人-包活, 3:工人-不包活）
+  industry: null, // 行业（1:雕塑, 2:广告）
   is_enable: 1,
   remark: ''
 })
@@ -572,21 +575,30 @@ function editUser(user) {
     if (res.code === 0) {
       const userData = res.data
       
-      // 设置店铺ID
-      let shopId = null
-      if (isRoot.value && selectedShopId.value) {
-        shopId = selectedShopId.value
-      } else if (!isRoot.value && shopInfo.value) {
-        shopId = shopInfo.value.id
-      } else if (userData.shop_id) {
-        shopId = userData.shop_id
+      // 获取用户当前的店铺ID和名称
+      const userShopId = userData.shop_id
+      let shopName = '未知店铺'
+      
+      // 从店铺列表中查找店铺名称
+      if (shopList.value.length > 0) {
+        const shop = shopList.value.find(s => s.id === userShopId)
+        if (shop) {
+          shopName = shop.name
+        }
+      } else if (userShopId === 1) {
+        shopName = '燕郊店'
+      } else if (userShopId === 2) {
+        shopName = '涞水店'
       }
       
       Object.assign(editForm, {
         id: userData.id,
         admin_display_name: userData.admin_display_name || '',
         mobile_phone: userData.mobile_phone || '',
-        shop_id: shopId,
+        shop_id: userShopId,
+        shop_name: shopName,
+        employ: userData.employ || null,
+        industry: userData.industry || null,
         is_enable: userData.is_enable,
         remark: userData.remark || ''
       })

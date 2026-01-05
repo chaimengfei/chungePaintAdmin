@@ -34,6 +34,9 @@
               {{ user.is_enable === 1 ? '正常' : '禁用' }}
             </el-tag>
           </el-descriptions-item>
+          <el-descriptions-item v-if="user.is_test === 1" label="账号标识">
+            测试号
+          </el-descriptions-item>
           <el-descriptions-item label="分类">
             <span v-if="user.employ === 1">工厂</span>
             <span v-else-if="user.employ === 2">工人-包活</span>

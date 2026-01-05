@@ -93,6 +93,12 @@
             </el-tag>
           </template>
         </el-table-column>
+        <el-table-column label="账号标识" width="120">
+          <template #default="scope">
+            <span v-if="scope.row.is_test === 1">测试号</span>
+            <span v-else style="color: #909399;">-</span>
+          </template>
+        </el-table-column>
         <el-table-column label="分类" width="120">
           <template #default="scope">
             <span v-if="scope.row.employ === 1">工厂</span>

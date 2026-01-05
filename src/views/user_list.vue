@@ -431,6 +431,12 @@ const editForm = reactive({
   is_enable: 1,
   remark: ''
 })
+// 保存原始数据，用于比较是否有变化
+const originalEditData = ref({
+  admin_display_name: '',
+  is_enable: 1,
+  remark: ''
+})
 
 // 表单验证规则
 const userFormRules = {
@@ -615,6 +621,13 @@ function editUser(user) {
         is_enable: userData.is_enable,
         remark: userData.remark || ''
       })
+      
+      // 保存原始数据，用于比较是否有变化
+      originalEditData.value = {
+        admin_display_name: userData.admin_display_name || '',
+        is_enable: userData.is_enable,
+        remark: userData.remark || ''
+      }
     } else {
       ElMessage.error(res.message || '获取用户详情失败')
       editDialogVisible.value = false
@@ -632,16 +645,36 @@ function editUser(user) {
 function submitEditForm() {
   editFormRef.value.validate((valid) => {
     if (valid) {
+      // 检查是否有字段被修改
+      const hasChanges = 
+        editForm.admin_display_name !== originalEditData.value.admin_display_name ||
+        editForm.is_enable !== originalEditData.value.is_enable ||
+        editForm.remark !== originalEditData.value.remark
+      
+      if (!hasChanges) {
+        ElMessage.warning('没有任何更改')
+        return
+      }
+      
       editSubmitting.value = true
       
-      editUserApi({
-        id: editForm.id,
-        admin_display_name: editForm.admin_display_name,
-        mobile_phone: editForm.mobile_phone,
-        shop_id: editForm.shop_id,
-        is_enable: editForm.is_enable,
-        remark: editForm.remark
-      }).then(res => {
+      // 构建提交数据，只传有变化的字段
+      const submitData = {
+        id: editForm.id
+      }
+      
+      // 只添加有变化的字段
+      if (editForm.admin_display_name !== originalEditData.value.admin_display_name) {
+        submitData.admin_display_name = editForm.admin_display_name
+      }
+      if (editForm.is_enable !== originalEditData.value.is_enable) {
+        submitData.is_enable = editForm.is_enable
+      }
+      if (editForm.remark !== originalEditData.value.remark) {
+        submitData.remark = editForm.remark
+      }
+      
+      editUserApi(submitData).then(res => {
         if (res.code === 0) {
           ElMessage.success('编辑用户成功')
           editDialogVisible.value = false

@@ -2,6 +2,7 @@
 import { ref, onMounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { getProductList, deleteProduct, batchCopyProduct } from '../api/order'
+import { getCategoryList } from '../api/category'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { QuestionFilled, Plus } from '@element-plus/icons-vue'
 import { getCurrentShopId } from '../utils/shop'
@@ -31,6 +32,9 @@ const selectedProducts = ref([]) // 选中的商品
 const copyDialogVisible = ref(false)
 const copySubmitting = ref(false)
 const targetShopId = ref(null)
+
+// 分类相关
+const categoryMap = ref({}) // 分类ID到分类名称的映射
 
 // 加载用户权限信息
 function loadUserInfo() {
@@ -122,6 +126,29 @@ function getCurrentShopName() {
     return shopInfo.value.name
   }
   return '未知店铺'
+}
+
+// 加载分类列表
+function loadCategories() {
+  getCategoryList().then(res => {
+    if (res.code === 0) {
+      const categories = res.data || []
+      // 构建分类ID到名称的映射
+      const map = {}
+      categories.forEach(category => {
+        map[category.id] = category.name
+      })
+      categoryMap.value = map
+    }
+  }).catch(() => {
+    console.error('获取分类列表失败')
+  })
+}
+
+// 获取分类名称
+function getCategoryName(categoryId) {
+  if (!categoryId) return '-'
+  return categoryMap.value[categoryId] || '-'
 }
 
 function editGoods(row) {
@@ -254,6 +281,7 @@ function submitBatchCopy() {
 
 onMounted(() => {
   loadUserInfo()
+  loadCategories() // 加载分类列表
   loadGoods()
   
   // 监听全局店铺切换事件
@@ -371,6 +399,11 @@ onMounted(() => {
       </el-table-column>
       <el-table-column prop="unit" label="单位" width="80" />
       <el-table-column prop="specification" label="规格" width="80" />
+      <el-table-column label="分类" width="120">
+        <template #default="{ row }">
+          {{ getCategoryName(row.category_id) }}
+        </template>
+      </el-table-column>
       <el-table-column label="库存" width="120" sortable prop="stock">
         <template #header>
           <span>库存</span>

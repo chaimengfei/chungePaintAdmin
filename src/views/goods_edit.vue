@@ -201,7 +201,8 @@ function saveGoods() {
 // 获取有变化的字段
 function getChangedFields() {
   const changedFields = {}
-  const editableFields = ['seller_price', 'specification', 'is_on_shelf', 'remark', 'stock']
+  // 编辑模式下，库存字段不可编辑，所以不包含在可编辑字段中
+  const editableFields = ['seller_price', 'specification', 'is_on_shelf', 'remark']
   
   editableFields.forEach(field => {
     if (form[field] !== originalData.value[field]) {
@@ -314,6 +315,7 @@ function cancel() {
               :min="0" 
               :step="1" 
               placeholder="请输入库存"
+              :disabled="isEdit"
               style="width: 100%;"
             />
           </el-form-item>
@@ -354,10 +356,24 @@ function cancel() {
       </el-form-item>
       
       <el-form-item>
-        <el-button type="primary" @click="saveGoods" :loading="loading">
-          {{ isEdit ? '更新' : '保存' }}
-        </el-button>
-        <el-button @click="cancel">取消</el-button>
+        <div class="button-group">
+          <el-button 
+            type="primary" 
+            @click="saveGoods" 
+            :loading="loading"
+            size="large"
+            style="font-size: 18px; padding: 16px 40px; font-weight: bold;"
+          >
+            {{ isEdit ? '更新' : '保存' }}
+          </el-button>
+          <el-button 
+            @click="cancel"
+            size="large"
+            style="font-size: 18px; padding: 16px 40px; font-weight: bold; margin-left: 20px;"
+          >
+            取消
+          </el-button>
+        </div>
       </el-form-item>
     </el-form>
   </div>
@@ -421,5 +437,13 @@ function cancel() {
   100% {
     transform: rotate(360deg);
   }
+}
+
+.button-group {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 20px 0;
 }
 </style>

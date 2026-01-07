@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getProductDetail } from '../api/order'
+import { getCategoryList } from '../api/category'
 import { ElMessage } from 'element-plus'
 
 const route = useRoute()
@@ -10,7 +11,11 @@ const loading = ref(false)
 const product = ref({})
 const shopInfo = ref({})
 
+// 分类相关
+const categoryMap = ref({}) // 分类ID到分类名称的映射
+
 onMounted(() => {
+  loadCategories() // 加载分类列表
   const id = route.query.id
   if (id) {
     loadProductDetail(id)
@@ -44,6 +49,29 @@ function goBack() {
 
 function editProduct() {
   router.push(`/goods/edit?id=${product.value.id}`)
+}
+
+// 加载分类列表
+function loadCategories() {
+  getCategoryList().then(res => {
+    if (res.code === 0) {
+      const categories = res.data || []
+      // 构建分类ID到名称的映射
+      const map = {}
+      categories.forEach(category => {
+        map[category.id] = category.name
+      })
+      categoryMap.value = map
+    }
+  }).catch(() => {
+    console.error('获取分类列表失败')
+  })
+}
+
+// 获取分类名称
+function getCategoryName(categoryId) {
+  if (!categoryId) return '-'
+  return categoryMap.value[categoryId] || '-'
 }
 </script>
 
@@ -83,9 +111,7 @@ function editProduct() {
                 <span v-else style="color: #909399;">暂无店铺信息</span>
               </el-descriptions-item>
               <el-descriptions-item label="商品分类">
-                <el-tag v-if="product.category_id === 1">油漆类</el-tag>
-                <el-tag v-else-if="product.category_id === 2" type="success">工具类</el-tag>
-                <el-tag v-else type="info">其他</el-tag>
+                {{ getCategoryName(product.category_id) }}
               </el-descriptions-item>
               <el-descriptions-item label="商品规格">{{ product.specification || '无' }}</el-descriptions-item>
               <el-descriptions-item label="商品单位">{{ product.unit }}</el-descriptions-item>

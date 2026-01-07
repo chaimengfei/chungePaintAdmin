@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { getProductList, deleteProduct } from '../api/order'
+import { getProductList, deleteProduct, batchCopyProduct } from '../api/order'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { QuestionFilled, Plus } from '@element-plus/icons-vue'
 import { getCurrentShopId } from '../utils/shop'
@@ -25,6 +25,12 @@ const selectedShopId = ref(null)
 
 // 筛选相关
 const showFilters = ref(false)
+
+// 批量复制相关
+const selectedProducts = ref([]) // 选中的商品
+const copyDialogVisible = ref(false)
+const copySubmitting = ref(false)
+const targetShopId = ref(null)
 
 // 加载用户权限信息
 function loadUserInfo() {
@@ -158,6 +164,94 @@ function addGoods() {
   router.push('/goods/add')
 }
 
+// 处理表格选择变化
+function handleSelectionChange(selection) {
+  selectedProducts.value = selection
+}
+
+// 显示批量复制弹窗
+function showBatchCopyDialog() {
+  if (selectedProducts.value.length === 0) {
+    ElMessage.warning('请先选择要复制的商品')
+    return
+  }
+  
+  if (selectedProducts.value.length > 10) {
+    ElMessage.warning('每次最多只能复制10个商品')
+    return
+  }
+  
+  if (!selectedShopId.value) {
+    ElMessage.warning('请先选择源店铺')
+    return
+  }
+  
+  // 过滤掉当前店铺，只显示其他店铺作为目标
+  const availableShops = shopList.value.filter(shop => shop.id !== selectedShopId.value)
+  if (availableShops.length === 0) {
+    ElMessage.warning('没有可用的目标店铺')
+    return
+  }
+  
+  targetShopId.value = availableShops[0].id
+  copyDialogVisible.value = true
+}
+
+// 提交批量复制
+function submitBatchCopy() {
+  if (!targetShopId.value) {
+    ElMessage.warning('请选择目标店铺')
+    return
+  }
+  
+  if (targetShopId.value === selectedShopId.value) {
+    ElMessage.warning('源店铺和目标店铺不能相同')
+    return
+  }
+  
+  copySubmitting.value = true
+  
+  const productIds = selectedProducts.value.map(item => item.id)
+  
+  batchCopyProduct({
+    source_shop_id: selectedShopId.value,
+    target_shop_id: targetShopId.value,
+    product_ids: productIds
+  }).then(res => {
+    if (res.code === 0) {
+      const data = res.data
+      const message = res.message || `复制成功 ${data.success_count} 个，未复制成功 ${data.failed_count} 个`
+      
+      if (data.failed_count > 0 && data.failed_items && data.failed_items.length > 0) {
+        // 有失败项，显示详细信息
+        const failedItemsText = data.failed_items.join('\n')
+        ElMessageBox.alert(
+          `${message}\n\n失败详情：\n${failedItemsText}`,
+          '复制结果',
+          {
+            confirmButtonText: '确定',
+            type: data.success_count > 0 ? 'warning' : 'error'
+          }
+        )
+      } else {
+        // 全部成功
+        ElMessage.success(message)
+      }
+      
+      copyDialogVisible.value = false
+      selectedProducts.value = [] // 清空选择
+      loadGoods() // 刷新列表
+    } else {
+      ElMessage.error(res.message || '复制失败')
+    }
+  }).catch((error) => {
+    console.log('批量复制错误:', error)
+    ElMessage.error('网络错误，请稍后重试')
+  }).finally(() => {
+    copySubmitting.value = false
+  })
+}
+
 onMounted(() => {
   loadUserInfo()
   loadGoods()
@@ -176,6 +270,14 @@ onMounted(() => {
     <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
       <h2>商品列表</h2>
       <div style="display: flex; align-items: center; gap: 16px;">
+        <el-button 
+          v-if="isRoot && selectedProducts.length > 0"
+          type="success" 
+          @click="showBatchCopyDialog" 
+          style="font-size: 16px; padding: 12px 24px; font-weight: bold; height: auto;"
+        >
+          批量复制 ({{ selectedProducts.length }})
+        </el-button>
         <el-button 
           type="warning" 
           @click="addGoods" 
@@ -237,7 +339,19 @@ onMounted(() => {
       </div>
     </el-card>
     
-    <el-table :data="goods" style="width: 100%" v-loading="loading" border>
+    <el-table 
+      :data="goods" 
+      style="width: 100%" 
+      v-loading="loading" 
+      border
+      @selection-change="handleSelectionChange"
+    >
+      <el-table-column 
+        v-if="isRoot"
+        type="selection" 
+        width="55" 
+        :selectable="() => true"
+      />
       <el-table-column prop="id" label="ID" width="80" sortable />
       <el-table-column label="名称" min-width="200">
         <template #default="{ row }">
@@ -310,6 +424,67 @@ onMounted(() => {
         @current-change="handlePageChange"
       />
     </div>
+
+    <!-- 批量复制弹窗 -->
+    <el-dialog
+      v-model="copyDialogVisible"
+      title="批量复制商品"
+      width="500px"
+      :close-on-click-modal="false"
+    >
+      <div style="margin-bottom: 20px;">
+        <p style="color: #606266; margin-bottom: 10px;">已选择 <strong>{{ selectedProducts.length }}</strong> 个商品</p>
+        <div style="max-height: 150px; overflow-y: auto; border: 1px solid #e4e7ed; border-radius: 4px; padding: 10px;">
+          <div 
+            v-for="product in selectedProducts" 
+            :key="product.id"
+            style="padding: 5px 0; border-bottom: 1px solid #f0f0f0;"
+          >
+            {{ product.name }} (ID: {{ product.id }})
+          </div>
+        </div>
+      </div>
+      
+      <el-form label-width="100px">
+        <el-form-item label="源店铺">
+          <el-input 
+            :value="getCurrentShopName()" 
+            disabled 
+            style="width: 100%;"
+          />
+        </el-form-item>
+        
+        <el-form-item label="目标店铺" required>
+          <el-select 
+            v-model="targetShopId" 
+            placeholder="请选择目标店铺" 
+            style="width: 100%;"
+          >
+            <el-option
+              v-for="shop in shopList.filter(s => s.id !== selectedShopId)"
+              :key="shop.id"
+              :label="shop.name"
+              :value="shop.id"
+            />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      
+      <div style="margin-top: 20px; padding: 15px; background: #f5f7fa; border-radius: 4px;">
+        <p style="margin: 0; color: #909399; font-size: 12px;">
+          <strong>提示：</strong>每次最多只能复制10个商品。如果目标店铺中已存在相同商品，将跳过该商品。
+        </p>
+      </div>
+      
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="copyDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="submitBatchCopy" :loading="copySubmitting">
+            确定复制
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 

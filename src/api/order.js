@@ -45,6 +45,11 @@ export function deleteProduct(id) {
   return request.delete(`/product/del/${id}`)
 }
 
+// 批量复制商品到另一个店铺
+export function batchCopyProduct(data) {
+  return request.post('/product/batch/copy', data)
+}
+
 // 获取出库列表
 export function getOutboundList(params) {
   return request.get('/stock/outbound/list', { params })

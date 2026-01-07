@@ -105,8 +105,8 @@ function handleLogin() {
           
           ElMessage.success('登录成功')
           
-          // 跳转到首页
-          router.push('/goods')
+          // 跳转到出库单页面
+          router.push('/stock/outbound')
         } else {
           ElMessage.error(res.message || '登录失败')
         }

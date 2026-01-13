@@ -15,6 +15,7 @@ const query = reactive({
   page: 1,
   page_size: 10,
   shop_id: null,
+  category_id: 0, // 分类ID，0表示所有商品，100表示热销商品
   name: '' // 商品名称搜索
 })
 
@@ -35,6 +36,7 @@ const targetShopId = ref(null)
 
 // 分类相关
 const categoryMap = ref({}) // 分类ID到分类名称的映射
+const categoryOptions = ref([]) // 分类选项列表（用于下拉选择）
 
 // 加载用户权限信息
 function loadUserInfo() {
@@ -98,6 +100,14 @@ function handleShopChange(shopId) {
   loadGoods()
 }
 
+// 处理分类切换
+function handleCategoryChange(value) {
+  // 如果清空选择，设置为0（全部）
+  query.category_id = value === null || value === undefined ? 0 : value
+  query.page = 1 // 重置到第一页
+  loadGoods()
+}
+
 
 // 搜索商品
 function searchGoods() {
@@ -108,6 +118,7 @@ function searchGoods() {
 // 重置筛选
 function resetFilters() {
   query.name = ''
+  query.category_id = 0
   query.page = 1
   loadGoods()
 }
@@ -139,6 +150,19 @@ function loadCategories() {
         map[category.id] = category.name
       })
       categoryMap.value = map
+      
+      // 构建分类选项列表（用于下拉选择）
+      const options = [
+        { label: '全部', value: 0 },
+        { label: '热销商品', value: 100 }
+      ]
+      categories.forEach(category => {
+        options.push({
+          label: category.name,
+          value: category.id
+        })
+      })
+      categoryOptions.value = options
     }
   }).catch(() => {
     console.error('获取分类列表失败')
@@ -345,6 +369,25 @@ onMounted(() => {
             disabled
             style="width: 150px;"
           />
+        </div>
+        
+        <!-- 分类筛选 -->
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="color: #606266; white-space: nowrap;">分类：</span>
+          <el-select
+            v-model="query.category_id"
+            placeholder="请选择分类"
+            style="width: 150px;"
+            clearable
+            @change="handleCategoryChange"
+          >
+            <el-option
+              v-for="option in categoryOptions"
+              :key="option.value"
+              :label="option.label"
+              :value="option.value"
+            />
+          </el-select>
         </div>
         
         <!-- 商品名称搜索 -->

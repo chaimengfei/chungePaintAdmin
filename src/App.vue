@@ -16,6 +16,13 @@
           <el-menu-item index="/goods/add">添加商品</el-menu-item>
           <el-menu-item index="/category">商品分类</el-menu-item>
         </el-sub-menu>
+        <el-sub-menu index="user">
+          <template #title>
+            <span style="font-weight: 500;">用户管理</span>
+          </template>
+          <el-menu-item index="/user/list">用户列表</el-menu-item>
+          <el-menu-item index="/address/list">地址列表</el-menu-item>
+        </el-sub-menu>
         <el-sub-menu index="stock">
           <template #title>
             <span style="font-weight: 500;">订单操作</span>
@@ -26,13 +33,6 @@
           <el-menu-item index="/stock/fee">其它费用</el-menu-item>
           <el-menu-item index="/stock/outbound/list">⭐ 操作列表</el-menu-item>
           <el-menu-item index="/stock/items/list">库存明细列表</el-menu-item>
-        </el-sub-menu>
-        <el-sub-menu index="user">
-          <template #title>
-            <span style="font-weight: 500;">用户管理</span>
-          </template>
-          <el-menu-item index="/user/list">用户列表</el-menu-item>
-          <el-menu-item index="/address/list">地址列表</el-menu-item>
         </el-sub-menu>
         <el-sub-menu index="dashboard">
           <template #title>

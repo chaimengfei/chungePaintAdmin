@@ -24,7 +24,7 @@ const form = reactive({
   id: '',
   name: '',
   category_id: 1,
-  seller_price: '',
+  seller_price: 0,
   cost: '',
   shipping_cost: 0,
   product_cost: '',
@@ -88,8 +88,16 @@ function loadProductDetail(id) {
     if (res.code === 0) {
       // 根据API返回的数据结构，商品数据在 res.data.product 中
       Object.assign(form, res.data.product)
+      // 确保 seller_price 是数字类型
+      if (form.seller_price !== null && form.seller_price !== undefined) {
+        form.seller_price = Number(form.seller_price)
+      }
       // 保存原始数据，用于比较哪些字段有变化
       originalData.value = { ...res.data.product }
+      // 确保原始数据中的 seller_price 也是数字类型
+      if (originalData.value.seller_price !== null && originalData.value.seller_price !== undefined) {
+        originalData.value.seller_price = Number(originalData.value.seller_price)
+      }
     } else {
       ElMessage.error('获取商品详情失败')
     }
@@ -279,9 +287,15 @@ function cancel() {
         </el-col>
         <el-col :span="12">
           <el-form-item label="售价" prop="seller_price">
-            <el-input v-model.number="form.seller_price" type="number" min="0" step="0.01" placeholder="请输入售价">
-              <template #prepend>¥</template>
-            </el-input>
+            <el-input-number 
+              v-model="form.seller_price" 
+              :min="0" 
+              :precision="2" 
+              :step="0.01" 
+              placeholder="请输入售价"
+              style="width: 100%;"
+              controls-position="right"
+            />
           </el-form-item>
         </el-col>
       </el-row>

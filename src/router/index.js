@@ -19,7 +19,7 @@ import OrderDashboard from '../views/order_dashboard.vue'
 import FinancialDashboard from '../views/financial_dashboard.vue'
 
 const routes = [
-  { path: '/', redirect: '/order/dashboard' },
+  { path: '/', redirect: '/stock/outbound' },
   { path: '/login', component: Login },
   { path: '/order/dashboard', component: OrderDashboard },
   { path: '/financial/dashboard', component: FinancialDashboard },

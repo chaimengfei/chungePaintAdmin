@@ -497,9 +497,17 @@ function batchSetPaymentStatus() {
     ElMessage.warning('所选订单均已支付，无需重复设置')
     return
   }
+
+  const totalSelected = selectedRows.value.length
+  const unpaidCount = unpaidOrders.length
+  const hasPaidAmongSelected = unpaidCount < totalSelected
+
+  const confirmMessage = hasPaidAmongSelected
+    ? `部分订单已支付，仅 ${unpaidCount} 个待支付，请确认这几笔订单再决定是否继续？`
+    : `确认将 ${unpaidCount} 个订单设置为已支付状态吗？`
   
   ElMessageBox.confirm(
-    `确认将 ${unpaidOrders.length} 个订单设置为已支付状态吗？`,
+    confirmMessage,
     '批量设置支付状态',
     {
       confirmButtonText: '确认',

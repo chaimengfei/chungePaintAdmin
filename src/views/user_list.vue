@@ -65,10 +65,12 @@
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column label="用户名" width="150">
           <template #default="scope">
-            <span v-if="scope.row.wechat_name">
-              {{ scope.row.wechat_name }}{{ scope.row.admin_display_name ? ` (${scope.row.admin_display_name})` : '' }}
-            </span>
-            <span v-else>{{ scope.row.admin_display_name || '-' }}</span>
+            {{ scope.row.admin_display_name || '' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="小程序名" width="150">
+          <template #default="scope">
+            {{ scope.row.wechat_name || '' }}
           </template>
         </el-table-column>
         <el-table-column prop="mobile_phone" label="手机号" width="150" />

@@ -87,34 +87,34 @@
         @selection-change="handleSelectionChange"
       >
         <el-table-column type="selection" width="55" />
-        <el-table-column prop="order_no" label="单号" width="200" />
-        <el-table-column prop="user_name" label="客户" width="120" />
-        <el-table-column prop="operator_name" label="操作人" width="120" />
-        <el-table-column label="出库类型" width="100">
+        <el-table-column prop="order_no" label="单号" width="160" />
+        <el-table-column prop="user_admin_name" label="客户" width="100" />
+        <el-table-column prop="operator_name" label="操作人" width="80" />
+        <el-table-column label="出库类型" width="88">
           <template #default="scope">
             <el-tag :type="scope.row.outbound_type === 1 ? 'success' : 'primary'">
               {{ scope.row.outbound_type === 1 ? '小程序' : '后台' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="total_quantity" label="总数量" width="100">
+        <el-table-column prop="total_quantity" label="总数量" width="70">
           <template #default="scope">
             <span style="color: #67c23a;">{{ scope.row.total_quantity || 0 }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="total_amount" label="总金额" width="120">
+        <el-table-column prop="total_amount" label="总金额" width="100">
           <template #default="scope">
             ¥{{ scope.row.total_amount?.toFixed(2) || '0.00' }}
           </template>
         </el-table-column>
-        <el-table-column prop="total_profit" label="总利润" width="120">
+        <el-table-column prop="total_profit" label="总利润" width="80">
           <template #default="scope">
             <span :style="{ color: scope.row.total_profit >= 0 ? '#67c23a' : '#f56c6c' }">
               ¥{{ scope.row.total_profit?.toFixed(2) || '0.00' }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column prop="payment_status" label="支付状态" width="150">
+        <el-table-column prop="payment_status" label="支付状态" width="110">
           <template #default="scope">
             <div v-if="scope.row.payment_status === 3" style="display: flex; align-items: center; gap: 4px;">
               <el-tag type="success">支付成功</el-tag>
@@ -143,7 +143,7 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="created_at" label="时间" width="180">
+        <el-table-column prop="created_at" label="时间" width="170">
           <template #default="scope">
             {{ formatDateTime(scope.row.created_at) }}
           </template>
@@ -701,7 +701,7 @@ function viewDetail(row) {
       <h3 style="margin-bottom: 20px; color: #303133;">出库单详情</h3>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
         <div><strong>单号：</strong>${row.order_no || row.operation_no || '无'}</div>
-        <div><strong>客户：</strong>${row.user_name || '无'}</div>
+        <div><strong>客户：</strong>${row.user_admin_name || '无'}</div>
         <div><strong>操作人：</strong>${row.operator_name || row.operator || '无'}</div>
         <div><strong>出库时间：</strong>${formatDateTime(row.created_at)}</div>
         <div><strong>总数量：</strong><span style="color: #67c23a;">${row.total_quantity || 0}</span></div>

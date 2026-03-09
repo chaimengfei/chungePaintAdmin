@@ -15,6 +15,7 @@ const batchForm = reactive({
     quantity: 1, 
     unit_price: 0,
     default_price: 0,
+    price_use_default: false,
     total_price: 0,
     product_name: '',
     unit: '',
@@ -159,6 +160,7 @@ function addBatchItem() {
     quantity: 1, 
     unit_price: 0,
     default_price: 0,
+    price_use_default: false,
     total_price: 0,
     product_name: '',
     unit: '',
@@ -183,9 +185,11 @@ function onProductChange(item, productId) {
         item.unit = product.unit || '个'
         item.specification = product.specification || ''
         item.default_price = product.seller_price || 0
-        // 默认展示单价
-        item.unit_price = product.seller_price || 0
+        // 不默认展示单价，置灰显示默认价占位，由用户点击后再输入
+        item.unit_price = 0
+        item.price_use_default = true
         item.total_price = 0
+        calculateItemTotal(item)
       }
     }).catch(() => {
       ElMessage.error('获取商品信息失败')
@@ -196,32 +200,100 @@ function onProductChange(item, productId) {
     item.specification = ''
     item.unit_price = 0
     item.default_price = 0
+    item.price_use_default = false
     item.total_price = 0
   }
 }
 
+// 获取当前行有效单价（置灰时用默认价，否则用输入价），保留2位小数
+function getEffectiveUnitPrice(item) {
+  const price = item.price_use_default ? (item.default_price || 0) : (parseFloat(item.unit_price) || 0)
+  return Math.round(price * 100) / 100
+}
+
 function calculateItemTotal(item) {
-  if (item.quantity && item.unit_price) {
-    item.total_price = item.quantity * item.unit_price
+  const price = getEffectiveUnitPrice(item)
+  if (item.quantity && price >= 0) {
+    item.total_price = Math.round(item.quantity * price * 100) / 100
   }
 }
 
-// 单价输入框获得焦点时，清空默认价格提示
+// 单价输入框获得焦点时：若当前是“默认置灰”状态，则解除置灰允许输入
 function onPriceFocus(item) {
-  if (item.unit_price === 0 && item.default_price > 0) {
+  if (item.price_use_default) {
+    item.price_use_default = false
     item.unit_price = ''
   }
 }
 
-// 单价输入框失去焦点时，如果为空则恢复默认价格提示
+// ---------- 单价（text 输入）数字合法性：三层保证 ----------
+// 1. 输入时：只允许数字、一个小数点、小数点后最多 2 位
+// 2. 失焦时：解析并格式化为数字，非法或负数则清空并提示
+// 3. 提交时：getEffectiveUnitPrice 只返回 ≥0 的两位小数，无效项不会通过校验
+
+/** 校验字符串是否为合法单价（≥0，最多两位小数） */
+function isValidUnitPriceStr(str) {
+  if (str === '' || str === null || str === undefined) return false
+  const s = String(str).trim()
+  if (s === '' || s === '.') return false
+  const num = parseFloat(s)
+  if (isNaN(num) || num < 0) return false
+  // 不允许超过两位小数（如 1.234）
+  const parts = s.split('.')
+  if (parts.length === 2 && parts[1].length > 2) return false
+  return true
+}
+
+// 单价输入框失去焦点时：若未输入且存在默认价则恢复置灰；否则校验并格式化为最多2位小数
 function onPriceBlur(item) {
-  if (!item.unit_price && item.default_price > 0) {
-    item.unit_price = 0
+  const val = item.unit_price
+  const str = String(val === null || val === undefined ? '' : val).trim()
+  if (str === '' && item.default_price > 0) {
+    item.price_use_default = true
+    item.unit_price = ''
+    calculateItemTotal(item)
+    return
   }
+  if (str === '' || str === '.') {
+    if (item.default_price > 0) {
+      item.price_use_default = true
+      item.unit_price = ''
+    }
+    calculateItemTotal(item)
+    return
+  }
+  if (!isValidUnitPriceStr(str)) {
+    item.unit_price = ''
+    ElMessage.warning('单价请输入有效数字（≥0，最多两位小数）')
+    calculateItemTotal(item)
+    return
+  }
+  const num = parseFloat(str)
+  item.unit_price = Math.round(num * 100) / 100
+  item.price_use_default = false
+  calculateItemTotal(item)
+}
+
+// 单价输入：仅允许数字和最多两位小数（用文本输入避免 type="number" 把 0.01 变成 1）
+function onPriceInput(item, value) {
+  if (value === '' || value === null || value === undefined) {
+    item.unit_price = ''
+    item.price_use_default = false
+    calculateItemTotal(item)
+    return
+  }
+  const s = String(value).trim()
+  // 只保留数字、一个小数点、且小数点后最多2位（输入层合法性）
+  const matched = s.match(/^\d*\.?\d{0,2}/)
+  const filtered = matched ? matched[0] : ''
+  item.unit_price = filtered
+  item.price_use_default = false
+  calculateItemTotal(item)
 }
 
 const totalAmount = computed(() => {
-  return batchForm.items.reduce((sum, item) => sum + (item.total_price || 0), 0)
+  const sum = batchForm.items.reduce((sum, item) => sum + (item.total_price || 0), 0)
+  return Math.round(sum * 100) / 100
 })
 
 // 检查草稿是否存在
@@ -253,7 +325,8 @@ function loadDraft() {
         product_id: item.product_id,
         quantity: item.quantity,
         unit_price: item.unit_price,
-        default_price: item.unit_price, // 使用保存的价格作为默认价格
+        default_price: item.default_price ?? item.unit_price ?? 0,
+        price_use_default: false,
         total_price: item.total_price,
         product_name: item.product_name || '',
         unit: item.unit || '',
@@ -269,7 +342,7 @@ function loadDraft() {
 // 保存草稿
 function saveDraft() {
   const validItems = batchForm.items.filter(item => 
-    item.product_id && item.quantity && item.unit_price && item.quantity > 0
+    item.product_id && item.quantity && getEffectiveUnitPrice(item) > 0 && item.quantity > 0
   )
   
   // 获取选中客户的user_id
@@ -279,7 +352,7 @@ function saveDraft() {
     items: validItems.map(item => ({
       product_id: item.product_id,
       quantity: item.quantity,
-      unit_price: item.unit_price,
+      unit_price: getEffectiveUnitPrice(item),
       total_price: item.total_price,
       product_name: item.product_name,
       unit: item.unit,
@@ -344,6 +417,7 @@ function resetForm() {
     quantity: 1, 
     unit_price: 0,
     default_price: 0,
+    price_use_default: false,
     total_price: 0,
     product_name: '',
     unit: '',
@@ -358,8 +432,9 @@ function submitBatchForm() {
     return
   }
   
+  // 第三层：提交前只提交单价有效的行（getEffectiveUnitPrice > 0）
   const validItems = batchForm.items.filter(item => 
-    item.product_id && item.quantity && item.unit_price && item.quantity > 0
+    item.product_id && item.quantity && getEffectiveUnitPrice(item) > 0 && item.quantity > 0
   )
   if (validItems.length === 0) {
     ElMessage.error('请至少添加一个商品并填写完整信息')
@@ -369,12 +444,12 @@ function submitBatchForm() {
   // 获取选中客户的user_id
   const selectedCustomer = customerOptions.value.find(customer => customer.value === batchForm.customer)
   
-  // 转换数据格式，移除页面展示字段
+  // 转换数据格式，单价保留2位小数
   const items = validItems.map(item => ({
     product_id: item.product_id,
     quantity: item.quantity,
-    unit_price: item.unit_price,
-    total_price: item.total_price,
+    unit_price: getEffectiveUnitPrice(item),
+    total_price: Math.round(item.quantity * getEffectiveUnitPrice(item) * 100) / 100,
     remark: item.remark || ''
   }))
   
@@ -470,6 +545,12 @@ onMounted(() => {
 .el-input:not([style*="flex"]),
 .el-select {
   width: 100%;
+}
+
+/* 单价为“默认置灰”时的样式，与 Element 只读/禁用输入框风格一致 */
+:deep(.unit-price-placeholder.el-input .el-input__wrapper) {
+  background-color: #f5f7fa;
+  color: #c0c4cc;
 }
 
 .el-button {
@@ -601,12 +682,13 @@ onMounted(() => {
                   </el-tooltip>
                 </label>
                 <el-input 
-                  v-model.number="item.unit_price" 
-                  type="number" 
-                  min="0" 
-                  step="0.01" 
-                  :placeholder="item.default_price ? `默认: ¥${item.default_price}` : '单价'"
-                  @input="calculateItemTotal(item)"
+                  :model-value="item.price_use_default ? '' : (item.unit_price === 0 ? '' : item.unit_price)"
+                  @update:model-value="(v) => onPriceInput(item, v)"
+                  type="text"
+                  inputmode="decimal"
+                  :readonly="item.price_use_default"
+                  :placeholder="item.price_use_default && item.default_price ? `默认: ¥${Number(item.default_price).toFixed(2)}` : '单价（支持两位小数）'"
+                  :class="{ 'unit-price-placeholder': item.price_use_default }"
                   @focus="onPriceFocus(item)"
                   @blur="onPriceBlur(item)"
                 />

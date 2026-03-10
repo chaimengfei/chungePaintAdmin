@@ -5,7 +5,6 @@ import { ElMessage } from 'element-plus'
 import { QuestionFilled } from '@element-plus/icons-vue'
 import request from '../api/request'
 import { batchInboundStock, getProductList, getSupplierList } from '../api/order'
-import { getUserList } from '../api/user'
 
 const router = useRouter()
 
@@ -77,19 +76,32 @@ function loadSupplierOptions() {
   })
 }
 
+// 加载客户列表（与出库单一致：同一接口、同一展示字段 admin_display_name）
 function loadCustomerOptions() {
-  getUserList({ page: 1, page_size: 1000 }).then(res => {
+  const shopId = batchForm.shop_id
+  if (!shopId) {
+    customerOptions.value = []
+    customerMap.value = {}
+    return
+  }
+  request.get('/user/list', {
+    params: { page: 1, page_size: 100, shop_id: shopId }
+  }).then(res => {
     if (res.code === 0) {
       const list = res.data?.list || []
-      customerOptions.value = list.map(item => ({ 
-        label: item.name || item.real_name || '未知用户', 
-        value: item.id 
+      customerOptions.value = list.map(item => ({
+        label: item.admin_display_name || item.name || '未知用户',
+        value: item.id
       }))
       customerMap.value = {}
       list.forEach(item => {
         customerMap.value[item.id] = item
       })
+    } else {
+      ElMessage.error(res.message || '获取客户列表失败')
     }
+  }).catch(() => {
+    ElMessage.error('获取客户列表失败')
   })
 }
 
@@ -360,11 +372,10 @@ function submitBatchForm() {
     data.supplier = supplier.name
   }
   
-  // 退货时添加客户信息
+  // 退货时添加客户信息（仅传 user_id，名称由后端按 user_id 查库）
   if (isReturn) {
     const customer = customerMap.value[batchForm.customer_id]
-    data.user_name = customer.name || customer.real_name || '未知用户'
-    data.user_id = customer.id
+    data.user_id = customer?.id
   }
   
   batchInboundStock(data).then(() => {

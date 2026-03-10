@@ -13,7 +13,9 @@ const router = useRouter()
 const batchForm = reactive({
   items: [{ 
     product_id: '', 
-    cost_per_unit: 0,  // 进价
+    cost_per_unit: 0,  // 进价（用户输入）
+    default_cost: 0,   // 默认进价，用于占位提示
+    price_use_default: false, // 是否使用默认进价（置灰提示）
     quantity: 1, 
     goods_total_amount: 0,  // 货物总金额
     product_name: '',
@@ -145,7 +147,9 @@ function handleShopChange(shopId) {
 function addBatchItem() {
   batchForm.items.push({ 
     product_id: '', 
-    cost_per_unit: 0,  // 进价
+    cost_per_unit: 0,  // 进价（用户输入）
+    default_cost: 0,   // 默认进价，用于占位提示
+    price_use_default: false,
     quantity: 1, 
     goods_total_amount: 0,  // 货物总金额
     product_name: '',
@@ -171,10 +175,13 @@ function onProductChange(item, productId) {
         item.product_name = product.name
         item.unit = product.unit || '个'
         item.specification = product.specification || ''
-        // 进价默认展示上一次进价（product_cost）
-        item.cost_per_unit = product.product_cost || 0
-        // 清空金额字段，等待用户输入数量后自动计算
+        // 保存默认进价，但不直接填入输入框，仅用于置灰提示
+        item.default_cost = product.product_cost || 0
+        item.cost_per_unit = 0
+        item.price_use_default = !!item.default_cost
+        // 清空金额字段，等待用户确认或修改进价后自动计算
         item.goods_total_amount = 0
+        calculateCosts(item)
         console.log('商品信息已填充:', { name: product.name, unit: product.unit, specification: product.specification, product_cost: product.product_cost })
       }
     }).catch(() => {
@@ -185,23 +192,100 @@ function onProductChange(item, productId) {
     item.unit = ''
     item.specification = ''
     item.cost_per_unit = 0
+    item.default_cost = 0
+    item.price_use_default = false
     item.goods_total_amount = 0
   }
 }
 
+// 获取当前行有效进价（置灰时用默认价，否则用输入价），保留2位小数
+function getEffectiveCost(item) {
+  const price = item.price_use_default ? (item.default_cost || 0) : (parseFloat(item.cost_per_unit) || 0)
+  return Math.round(price * 100) / 100
+}
+
 // 计算成本相关字段
 function calculateCosts(item) {
-  if (item.cost_per_unit && item.quantity && item.quantity > 0) {
+  const cost = getEffectiveCost(item)
+  if (item.quantity && cost >= 0) {
     // 计算金额 = 进价 × 数量
-    item.goods_total_amount = item.cost_per_unit * item.quantity
+    item.goods_total_amount = Math.round(item.quantity * cost * 100) / 100
   } else {
     item.goods_total_amount = 0
   }
 }
 
+// 进价输入框获得焦点：若当前是“默认置灰”状态，则解除置灰允许输入
+function onCostFocus(item) {
+  if (item.price_use_default) {
+    item.price_use_default = false
+    item.cost_per_unit = ''
+  }
+}
+
+// 校验字符串是否为合法进价（≥0，最多两位小数）
+function isValidCostStr(str) {
+  if (str === '' || str === null || str === undefined) return false
+  const s = String(str).trim()
+  if (s === '' || s === '.') return false
+  const num = parseFloat(s)
+  if (isNaN(num) || num < 0) return false
+  const parts = s.split('.')
+  if (parts.length === 2 && parts[1].length > 2) return false
+  return true
+}
+
+// 进价输入框失去焦点：如果为空且有默认价，则恢复置灰；否则校验并格式化为两位小数
+function onCostBlur(item) {
+  const val = item.cost_per_unit
+  const str = String(val === null || val === undefined ? '' : val).trim()
+  if (str === '' && item.default_cost > 0) {
+    item.price_use_default = true
+    item.cost_per_unit = ''
+    calculateCosts(item)
+    return
+  }
+  if (str === '' || str === '.') {
+    if (item.default_cost > 0) {
+      item.price_use_default = true
+      item.cost_per_unit = ''
+    }
+    calculateCosts(item)
+    return
+  }
+  if (!isValidCostStr(str)) {
+    item.cost_per_unit = ''
+    ElMessage.warning('进价请输入有效数字（≥0，最多两位小数）')
+    calculateCosts(item)
+    return
+  }
+  const num = parseFloat(str)
+  item.cost_per_unit = Math.round(num * 100) / 100
+  item.price_use_default = false
+  calculateCosts(item)
+}
+
+// 进价输入：仅允许数字和最多两位小数
+function onCostInput(item, value) {
+  if (value === '' || value === null || value === undefined) {
+    item.cost_per_unit = ''
+    item.price_use_default = false
+    calculateCosts(item)
+    return
+  }
+  const s = String(value).trim()
+  // 只保留数字、一个小数点、且小数点后最多2位
+  const matched = s.match(/^\d*\.?\d{0,2}/)
+  const filtered = matched ? matched[0] : ''
+  item.cost_per_unit = filtered
+  item.price_use_default = false
+  calculateCosts(item)
+}
+
 // 计算总金额
 const totalSpent = computed(() => {
-  return batchForm.items.reduce((sum, item) => sum + (item.goods_total_amount || 0), 0)
+  const sum = batchForm.items.reduce((sum, item) => sum + (item.goods_total_amount || 0), 0)
+  return Math.round(sum * 100) / 100
 })
 
 
@@ -252,7 +336,7 @@ function submitBatchForm() {
   const items = validItems.map(item => ({
     product_id: item.product_id,
     quantity: item.quantity,
-    product_cost: item.cost_per_unit,
+    product_cost: getEffectiveCost(item),
     total_price: item.goods_total_amount,
     remark: item.remark || ''
   }))
@@ -366,6 +450,12 @@ onMounted(() => {
 .el-input:not([style*="flex"]),
 .el-select {
   width: 100%;
+}
+
+.unit-price-placeholder :deep(.el-input__wrapper),
+:deep(.unit-price-placeholder.el-input .el-input__wrapper) {
+  background-color: #f5f7fa;
+  color: #c0c4cc;
 }
 
 .el-button {
@@ -522,7 +612,17 @@ onMounted(() => {
                     <el-icon style="margin-left: 4px; cursor: pointer; font-size: 12px;"><QuestionFilled /></el-icon>
                   </el-tooltip>
                 </label>
-                <el-input v-model.number="item.cost_per_unit" type="number" min="0" step="0.01" placeholder="请输入进价" @input="calculateCosts(item)" />
+                <el-input 
+                  :model-value="item.price_use_default ? '' : (item.cost_per_unit === 0 ? '' : item.cost_per_unit)"
+                  @update:model-value="(v) => onCostInput(item, v)"
+                  type="text"
+                  inputmode="decimal"
+                  :readonly="item.price_use_default"
+                  :placeholder="item.price_use_default && item.default_cost ? `默认: ¥${Number(item.default_cost).toFixed(2)}` : '请输入进价（最多两位小数）'"
+                  :class="{ 'unit-price-placeholder': item.price_use_default }"
+                  @focus="onCostFocus(item)"
+                  @blur="onCostBlur(item)"
+                />
               </div>
               <div class="form-group">
                 <label>数量</label>

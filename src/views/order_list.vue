@@ -63,6 +63,14 @@
         <!-- 操作按钮 -->
         <div style="display: flex; align-items: center; gap: 8px;">
           <el-button type="primary" @click="handleSearch">查询</el-button>
+          <el-button 
+            type="danger" 
+            @click="handleExport" 
+            :loading="exportLoading"
+            style="background-color: #e8919e; border-color: #d97a8a; color: #fff;"
+          >
+            导出
+          </el-button>
           <el-button @click="handleReset">重置</el-button>
         </div>
       </div>
@@ -247,6 +255,7 @@ import request from '../api/request'
 
 const outboundList = ref([])
 const loading = ref(false)
+const exportLoading = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
@@ -381,6 +390,34 @@ function handleReset() {
   currentPage.value = 1
   orderType.value = 1 // 重置为出库
   loadOutboundList()
+}
+
+// 导出：参数与列表接口一致，仅去掉 page、page_size；接口返回 JSON 含 data.url，再打开该 URL 下载真实 Excel
+function handleExport() {
+  const params = {}
+  params.types = orderType.value
+  if (isRoot.value && selectedShopId.value) {
+    params.shop_id = selectedShopId.value
+  }
+  if (startTime.value) params.start_time = startTime.value
+  if (endTime.value) params.end_time = endTime.value
+
+  exportLoading.value = true
+  request.get('/order/operations/export', { params })
+    .then((res) => {
+      if (res.code === 0 && res.data && res.data.url) {
+        window.open(res.data.url, '_blank')
+        ElMessage.success('导出成功，请查看下载')
+      } else {
+        ElMessage.error(res.message || '导出失败')
+      }
+    })
+    .catch((err) => {
+      ElMessage.error(err?.message || '导出失败')
+    })
+    .finally(() => {
+      exportLoading.value = false
+    })
 }
 
 // 加载出库列表

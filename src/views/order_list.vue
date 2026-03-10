@@ -90,10 +90,13 @@
         <el-table-column prop="order_no" label="单号" width="160" />
         <el-table-column prop="user_admin_name" label="客户" width="100" />
         <el-table-column prop="operator_name" label="操作人" width="80" />
-        <el-table-column label="出库类型" width="88">
+        <el-table-column label="操作类型" width="100">
           <template #default="scope">
-            <el-tag :type="scope.row.outbound_type === 1 ? 'success' : 'primary'">
-              {{ scope.row.outbound_type === 1 ? '小程序' : '后台' }}
+            <el-tag
+              :type="getOperationType(scope.row).tagType"
+              :style="getOperationType(scope.row).style"
+            >
+              {{ getOperationType(scope.row).text }}
             </el-tag>
           </template>
         </el-table-column>
@@ -276,14 +279,14 @@ const dateRange = ref([])
 const startTime = ref('')
 const endTime = ref('')
 
-// 初始化默认时间范围（最近半年）
+// 初始化默认时间范围（最近 1 个月）
 function initDefaultDateRange() {
   const now = new Date()
-  const sixMonthsAgo = new Date()
-  sixMonthsAgo.setMonth(now.getMonth() - 6)
+  const oneMonthAgo = new Date()
+  oneMonthAgo.setMonth(now.getMonth() - 1)
   
   // 设置默认时间范围
-  const startDate = sixMonthsAgo.toISOString().slice(0, 19).replace('T', ' ')
+  const startDate = oneMonthAgo.toISOString().slice(0, 19).replace('T', ' ')
   const endDate = now.toISOString().slice(0, 19).replace('T', ' ')
   
   startTime.value = startDate
@@ -467,6 +470,33 @@ function getPaymentStatusText(paymentStatus) {
     3: '支付成功'
   }
   return statusMap[paymentStatus] || '未知状态'
+}
+
+// 操作类型：order_type 1=出库 2=入库 3=退货；outbound_type 1=小程序 2=后台
+function getOperationType(row) {
+  const orderType = row.order_type
+  const outboundType = row.outbound_type
+  if (orderType === 1) {
+    return outboundType === 1
+      ? { text: '小程序', tagType: 'success' }
+      : { text: '后台出库', tagType: 'primary' }
+  }
+  if (orderType === 2) {
+    return { text: '入库', tagType: 'warning' }
+  }
+  if (orderType === 3) {
+    // 退货：使用浅粉色背景
+    return {
+      text: '退货',
+      tagType: 'info',
+      style: {
+        backgroundColor: '#ffe4ec',
+        borderColor: '#f8b4c4',
+        color: '#be185d'
+      }
+    }
+  }
+  return { text: '未知', tagType: 'info' }
 }
 
 // 处理表格选择变化
@@ -708,7 +738,7 @@ function viewDetail(row) {
         <div><strong>总金额：</strong>¥${row.total_amount?.toFixed(2) || '0.00'}</div>
         <div><strong>总利润：</strong><span style="color: ${row.total_profit >= 0 ? '#67c23a' : '#f56c6c'}">¥${row.total_profit?.toFixed(2) || '0.00'}</span></div>
         <div><strong>支付状态：</strong>${getPaymentStatusText(row.payment_status)}${row.payment_status === 3 && row.payment_type ? ` (${getPaymentTypeText(row.payment_type)})` : ''}</div>
-        <div><strong>出库类型：</strong>${row.outbound_type === 1 ? '小程序' : '后台'}</div>
+        <div><strong>操作类型：</strong>${getOperationType(row).text}</div>
       </div>
       ${row.remark ? `<div style="margin-bottom: 20px;"><strong>备注：</strong>${row.remark}</div>` : ''}
       <div>

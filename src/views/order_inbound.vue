@@ -379,7 +379,10 @@ function submitBatchForm() {
   }
   
   batchInboundStock(data).then(() => {
-    ElMessage.success(isReturn ? '退货入库成功' : '入库成功')
+    ElMessage.success({
+      message: isReturn ? '退货入库成功' : '入库成功',
+      duration: 5000
+    })
     router.push('/stock/inbound')
   }).catch(() => {
     ElMessage.error(isReturn ? '退货入库失败' : '入库失败')
@@ -614,12 +617,12 @@ onMounted(() => {
               </div>
             </div>
             
-            <!-- 第二行：进价、数量、金额 -->
+            <!-- 第二行：价格、数量、金额 -->
             <div class="item-row">
               <div class="form-group">
                 <label>
-                  进价
-                  <el-tooltip content="默认展示上一次的进价，有变动也可手动填充" placement="top">
+                  价格
+                  <el-tooltip content="默认展示上一次的价格，有变动也可手动填充" placement="top">
                     <el-icon style="margin-left: 4px; cursor: pointer; font-size: 12px;"><QuestionFilled /></el-icon>
                   </el-tooltip>
                 </label>
@@ -629,7 +632,7 @@ onMounted(() => {
                   type="text"
                   inputmode="decimal"
                   :readonly="item.price_use_default"
-                  :placeholder="item.price_use_default && item.default_cost ? `默认: ¥${Number(item.default_cost).toFixed(2)}` : '请输入进价（最多两位小数）'"
+                  :placeholder="item.price_use_default && item.default_cost ? `默认: ¥${Number(item.default_cost).toFixed(2)}` : '请输入价格（最多两位小数）'"
                   :class="{ 'unit-price-placeholder': item.price_use_default }"
                   @focus="onCostFocus(item)"
                   @blur="onCostBlur(item)"

@@ -38,6 +38,8 @@
           </template>
           <el-menu-item index="/user/recharge">会员充值</el-menu-item>
           <el-menu-item index="/stock/fee">其它费用</el-menu-item>
+          <el-menu-item index="/finance/list">⭐财务列表</el-menu-item>
+
         </el-sub-menu>
         <el-sub-menu index="dashboard">
           <template #title>

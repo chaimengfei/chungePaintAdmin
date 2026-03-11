@@ -17,6 +17,7 @@ import AddressList from '../views/address_list.vue'
 import Login from '../views/login.vue'
 import OrderDashboard from '../views/order_dashboard.vue'
 import FinancialDashboard from '../views/financial_dashboard.vue'
+import FinanceList from '../views/finance_list.vue'
 
 const routes = [
   { path: '/', redirect: '/stock/outbound' },
@@ -35,6 +36,7 @@ const routes = [
   { path: '/stock/inbound', component: OrderInbound },
   { path: '/user/recharge', component: UserRecharge, meta: { title: '会员充值' } },
   { path: '/stock/fee', component: OrderFee, meta: { title: '其它费用' } },
+  { path: '/finance/list', component: FinanceList, meta: { title: '财务列表' } },
   { path: '/user/list', component: UserList },
   { path: '/user/edit', component: UserEdit },
   { path: '/user/detail', component: UserDetail },

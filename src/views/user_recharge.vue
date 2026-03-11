@@ -12,14 +12,12 @@
         label-width="140px"
         style="max-width: 800px;"
       >
-        <!-- 用户选择 -->
+        <!-- 用户选择：与出库单一致，按店铺加载客户列表 -->
         <el-form-item label="选择用户" prop="user_id">
           <el-select
             v-model="rechargeForm.user_id"
             placeholder="请选择用户"
             filterable
-            remote
-            :remote-method="searchUsers"
             :loading="userSearchLoading"
             style="width: 100%;"
             @change="handleUserChange"
@@ -27,23 +25,13 @@
             <el-option
               v-for="user in userOptions"
               :key="user.id"
-              :label="`${user.admin_display_name} (${user.mobile_phone})`"
+              :label="`${user.admin_display_name || user.name || '未知用户'} (${user.mobile_phone || ''})`"
               :value="user.id"
             />
           </el-select>
           <div v-if="selectedUser" style="margin-top: 8px; color: #909399; font-size: 14px;">
             当前余额：¥{{ (selectedUser.balance || 0) / 100 }}
           </div>
-        </el-form-item>
-
-        <!-- 赠送类型 -->
-        <el-form-item label="赠送类型" prop="gift_type">
-          <el-radio-group v-model="rechargeForm.gift_type" @change="handleGiftTypeChange">
-            <el-radio :label="0">只充值，无赠送</el-radio>
-            <el-radio :label="1">额外赠送余额</el-radio>
-            <el-radio :label="2">送虚拟物品</el-radio>
-            <el-radio :label="10">仅赠送余额</el-radio>
-          </el-radio-group>
         </el-form-item>
 
         <!-- 充值金额 -->
@@ -57,52 +45,12 @@
             :min="0"
             :precision="2"
             :step="100"
-            :disabled="rechargeForm.gift_type === 10"
             placeholder="请输入充值金额"
             style="width: 100%;"
           />
           <div style="margin-top: 8px; color: #909399; font-size: 12px;">
-            <span v-if="rechargeForm.gift_type === 10">仅赠送时，充值金额必须为0</span>
-            <span v-else>充值金额必须大于0</span>
+            充值金额必须大于0
           </div>
-        </el-form-item>
-
-        <!-- 赠送金额 -->
-        <el-form-item 
-          v-if="rechargeForm.gift_type === 1 || rechargeForm.gift_type === 10"
-          label="赠送金额（元）" 
-          prop="gift_amount"
-          :rules="giftAmountRules"
-        >
-          <el-input-number
-            v-model="rechargeForm.gift_amount"
-            :min="0"
-            :precision="2"
-            :step="10"
-            placeholder="请输入赠送金额"
-            style="width: 100%;"
-          />
-          <div style="margin-top: 8px; color: #909399; font-size: 12px;">
-            <span v-if="rechargeForm.gift_type === 1">额外赠送时，赠送金额必须大于0</span>
-            <span v-else-if="rechargeForm.gift_type === 10">仅赠送时，赠送金额必须大于0</span>
-          </div>
-        </el-form-item>
-
-        <!-- 支付方式 -->
-        <el-form-item 
-          v-if="rechargeForm.gift_type !== 10"
-          label="支付方式" 
-          prop="payment_type"
-        >
-          <el-select
-            v-model="rechargeForm.payment_type"
-            placeholder="请选择支付方式"
-            style="width: 100%;"
-          >
-            <el-option label="微信支付" :value="1" />
-            <el-option label="余额支付" :value="2" />
-            <el-option label="线下转账" :value="3" />
-          </el-select>
         </el-form-item>
 
         <!-- 备注 -->
@@ -128,9 +76,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { rechargeUser, getUserList } from '../api/user'
+import request from '../api/request'
+import { rechargeUser } from '../api/user'
 
 const rechargeFormRef = ref(null)
 const submitting = ref(false)
@@ -142,9 +91,6 @@ const selectedUser = ref(null)
 const rechargeForm = reactive({
   user_id: null,
   amount: null,
-  gift_type: 0,
-  gift_amount: null,
-  payment_type: 1,
   note: ''
 })
 
@@ -154,61 +100,23 @@ const shopInfo = ref(null)
 const shopList = ref([])
 
 // 充值金额验证规则
-const amountRules = computed(() => {
-  return [
-    {
-      validator: (rule, value, callback) => {
-        if (rechargeForm.gift_type === 10) {
-          // 仅赠送时，金额必须为0
-          if (value !== 0 && value !== null) {
-            callback(new Error('仅赠送时，充值金额必须为0'))
-          } else {
-            callback()
-          }
-        } else {
-          // 其他情况，金额必须大于0
-          if (!value || value <= 0) {
-            callback(new Error('充值金额必须大于0'))
-          } else {
-            callback()
-          }
-        }
-      },
-      trigger: 'blur'
-    }
-  ]
-})
-
-// 赠送金额验证规则
-const giftAmountRules = computed(() => {
-  return [
-    {
-      validator: (rule, value, callback) => {
-        if (rechargeForm.gift_type === 1 || rechargeForm.gift_type === 10) {
-          if (!value || value <= 0) {
-            callback(new Error('赠送金额必须大于0'))
-          } else {
-            callback()
-          }
-        } else {
-          callback()
-        }
-      },
-      trigger: 'blur'
-    }
-  ]
-})
+const amountRules = [
+  {
+    validator: (rule, value, callback) => {
+      if (value == null || value === '' || Number(value) <= 0) {
+        callback(new Error('充值金额必须大于0'))
+      } else {
+        callback()
+      }
+    },
+    trigger: 'blur'
+  }
+]
 
 // 表单验证规则
 const rechargeFormRules = {
   user_id: [
     { required: true, message: '请选择用户', trigger: 'change' }
-  ],
-  gift_type: [
-    { required: true, message: '请选择赠送类型', trigger: 'change' }
-  ],
-  payment_type: [
-    { required: true, message: '请选择支付方式', trigger: 'change' }
   ]
 }
 
@@ -236,35 +144,32 @@ function loadUserInfo() {
   }
 }
 
-// 搜索用户
-function searchUsers(query) {
-  if (!query) {
+// 获取当前店铺ID（与出库单逻辑一致）
+function getCurrentShopId() {
+  if (!isRoot.value && shopInfo.value) return shopInfo.value.id
+  if (isRoot.value && shopList.value.length > 0) return shopList.value[0]?.id ?? null
+  return null
+}
+
+// 加载客户列表：与出库单一致，使用 /user/list + shop_id
+function loadCustomerOptions() {
+  const shopId = getCurrentShopId()
+  if (!shopId) {
     userOptions.value = []
     return
   }
-  
   userSearchLoading.value = true
-  
-  const params = {
-    keyword: query,
-    page: 1,
-    page_size: 20
-  }
-  
-  // 如果不是root用户，添加店铺筛选
-  if (!isRoot.value && shopInfo.value) {
-    params.shop_id = shopInfo.value.id
-  }
-  
-  getUserList(params).then(res => {
+  request.get('/user/list', {
+    params: { page: 1, page_size: 100, shop_id: shopId }
+  }).then(res => {
     if (res.code === 0) {
       userOptions.value = res.data?.list || []
     } else {
-      ElMessage.error(res.message || '搜索用户失败')
+      ElMessage.error(res.message || '获取客户列表失败')
       userOptions.value = []
     }
   }).catch(() => {
-    ElMessage.error('搜索用户失败')
+    ElMessage.error('获取客户列表失败')
     userOptions.value = []
   }).finally(() => {
     userSearchLoading.value = false
@@ -286,44 +191,11 @@ function handleUserChange(userId) {
   }
 }
 
-// 赠送类型变化
-function handleGiftTypeChange() {
-  // 重置相关字段
-  if (rechargeForm.gift_type === 2) {
-    // 送虚拟物品时，赠送金额必须为0
-    rechargeForm.gift_amount = 0
-  } else if (rechargeForm.gift_type === 10) {
-    // 仅赠送时，充值金额必须为0
-    rechargeForm.amount = 0
-  }
-}
-
 // 提交表单
 function submitForm() {
   rechargeFormRef.value.validate((valid) => {
     if (!valid) {
       return false
-    }
-    
-    // 额外验证
-    if (rechargeForm.gift_type === 1 && (!rechargeForm.gift_amount || rechargeForm.gift_amount <= 0)) {
-      ElMessage.error('额外赠送余额时，赠送金额必须大于0')
-      return
-    }
-    
-    if (rechargeForm.gift_type === 2 && rechargeForm.gift_amount !== 0 && rechargeForm.gift_amount !== null) {
-      ElMessage.error('送虚拟物品时，赠送金额必须为0')
-      return
-    }
-    
-    if (rechargeForm.gift_type === 10 && (rechargeForm.amount !== 0 && rechargeForm.amount !== null)) {
-      ElMessage.error('仅赠送时，充值金额必须为0')
-      return
-    }
-    
-    if (rechargeForm.gift_type === 10 && (!rechargeForm.gift_amount || rechargeForm.gift_amount <= 0)) {
-      ElMessage.error('仅赠送时，赠送金额必须大于0')
-      return
     }
     
     // 获取操作员信息
@@ -353,9 +225,6 @@ function submitForm() {
     const data = {
       user_id: rechargeForm.user_id,
       amount: Math.round((rechargeForm.amount || 0) * 100), // 转换为分
-      gift_type: rechargeForm.gift_type,
-      gift_amount: Math.round((rechargeForm.gift_amount || 0) * 100), // 转换为分
-      payment_type: rechargeForm.payment_type,
       operator: operatorName,
       operator_id: operatorId,
       note: rechargeForm.note || '',
@@ -363,7 +232,7 @@ function submitForm() {
     }
     
     ElMessageBox.confirm(
-      `确认${rechargeForm.gift_type === 10 ? '赠送' : '充值'}吗？`,
+      '确认充值吗？',
       '确认操作',
       {
         confirmButtonText: '确认',
@@ -400,16 +269,14 @@ function resetForm() {
   rechargeFormRef.value?.resetFields()
   rechargeForm.user_id = null
   rechargeForm.amount = null
-  rechargeForm.gift_type = 0
-  rechargeForm.gift_amount = null
-  rechargeForm.payment_type = 1
   rechargeForm.note = ''
   selectedUser.value = null
-  userOptions.value = []
+  loadCustomerOptions()
 }
 
 onMounted(() => {
   loadUserInfo()
+  loadCustomerOptions()
 })
 </script>
 

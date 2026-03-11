@@ -31,7 +31,12 @@
               />
             </el-select>
             <div v-if="selectedUser" style="margin-top: 8px; color: #909399; font-size: 14px;">
-              当前余额：¥{{ (selectedUser.balance || 0) / 100 }}
+              <template v-if="selectedUser.first_recharge_at">
+                当前余额：¥{{ selectedUser.balance ?? 0 }}
+              </template>
+              <template v-else>
+                之前未充值过
+              </template>
             </div>
           </el-form-item>
           <el-form-item 

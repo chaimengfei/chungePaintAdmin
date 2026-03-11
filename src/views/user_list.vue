@@ -62,18 +62,18 @@
 
       <!-- 用户表格 -->
       <el-table :data="userList" style="width: 100%" v-loading="loading" border>
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column label="用户名" width="150">
+        <el-table-column prop="id" label="ID" width="50" />
+        <el-table-column label="用户名" width="100">
           <template #default="scope">
             {{ scope.row.admin_display_name || '' }}
           </template>
         </el-table-column>
-        <el-table-column label="小程序名" width="150">
+        <el-table-column label="小程序名" width="90">
           <template #default="scope">
             {{ scope.row.wechat_name || '' }}
           </template>
         </el-table-column>
-        <el-table-column prop="mobile_phone" label="手机号" width="150" />
+        <el-table-column prop="mobile_phone" label="手机号" width="110" />
         <el-table-column label="来源" width="100">
           <template #default="scope">
             <el-tag :type="scope.row.source === 1 ? 'warning' : 'primary'">
@@ -81,27 +81,33 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="微信绑定" width="100">
+        <el-table-column label="微信绑定" width="90">
           <template #default="scope">
             <el-tag :type="scope.row.has_wechat_bind === 1 ? 'primary' : 'info'">
               {{ scope.row.has_wechat_bind === 1 ? '已绑定' : '未绑定' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="100">
+        <el-table-column label="充值余额" width="85">
+          <template #default="scope">
+            <span v-if="scope.row.first_recharge_at != null">{{ scope.row.balance ?? 0 }}</span>
+            <span v-else style="color: #909399;">-</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="70">
           <template #default="scope">
             <el-tag :type="scope.row.is_enable === 1 ? 'success' : 'danger'">
               {{ scope.row.is_enable === 1 ? '正常' : '禁用' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="账号标识" width="120">
+        <el-table-column label="测试号" width="70">
           <template #default="scope">
-            <span v-if="scope.row.is_test === 1">测试号</span>
+            <span v-if="scope.row.is_test === 1">是</span>
             <span v-else style="color: #909399;">-</span>
           </template>
         </el-table-column>
-        <el-table-column label="分类" width="120">
+        <el-table-column label="分类" width="100">
           <template #default="scope">
             <span v-if="scope.row.employ === 1">工厂</span>
             <span v-else-if="scope.row.employ === 2">工人-包活</span>
@@ -109,14 +115,14 @@
             <span v-else style="color: #909399;">-</span>
           </template>
         </el-table-column>
-        <el-table-column label="行业" width="100">
+        <el-table-column label="行业" width="70">
           <template #default="scope">
             <span v-if="scope.row.industry === 1">雕塑</span>
             <span v-else-if="scope.row.industry === 2">广告</span>
             <span v-else style="color: #909399;">-</span>
           </template>
         </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" width="180">
+        <el-table-column prop="created_at" label="创建时间" width="165">
           <template #default="scope">
             {{ formatDateTime(scope.row.created_at) }}
           </template>

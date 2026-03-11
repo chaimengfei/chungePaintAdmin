@@ -12,46 +12,44 @@
         label-width="140px"
         style="max-width: 800px;"
       >
-        <!-- 用户选择：与出库单一致，按店铺加载客户列表 -->
-        <el-form-item label="选择用户" prop="user_id">
-          <el-select
-            v-model="rechargeForm.user_id"
-            placeholder="请选择用户"
-            filterable
-            :loading="userSearchLoading"
-            style="width: 100%;"
-            @change="handleUserChange"
+        <!-- 选择用户、充值金额：一行展示，各占 1/2，顶部对齐 -->
+        <div style="display: flex; gap: 24px; align-items: flex-start; margin-bottom: 18px;">
+          <el-form-item label="选择用户" prop="user_id" style="flex: 1; margin-bottom: 0;">
+            <el-select
+              v-model="rechargeForm.user_id"
+              placeholder="请选择用户"
+              filterable
+              :loading="userSearchLoading"
+              style="width: 100%;"
+              @change="handleUserChange"
+            >
+              <el-option
+                v-for="user in userOptions"
+                :key="user.id"
+                :label="`${user.admin_display_name || user.name || '未知用户'} (${user.mobile_phone || ''})`"
+                :value="user.id"
+              />
+            </el-select>
+            <div v-if="selectedUser" style="margin-top: 8px; color: #909399; font-size: 14px;">
+              当前余额：¥{{ (selectedUser.balance || 0) / 100 }}
+            </div>
+          </el-form-item>
+          <el-form-item 
+            label="充值金额（元）" 
+            prop="amount"
+            :rules="amountRules"
+            style="flex: 1; margin-bottom: 0;"
           >
-            <el-option
-              v-for="user in userOptions"
-              :key="user.id"
-              :label="`${user.admin_display_name || user.name || '未知用户'} (${user.mobile_phone || ''})`"
-              :value="user.id"
+            <el-input-number
+              v-model="rechargeForm.amount"
+              :min="0"
+              :precision="2"
+              :step="100"
+              placeholder="请输入充值金额"
+              style="width: 100%;"
             />
-          </el-select>
-          <div v-if="selectedUser" style="margin-top: 8px; color: #909399; font-size: 14px;">
-            当前余额：¥{{ (selectedUser.balance || 0) / 100 }}
-          </div>
-        </el-form-item>
-
-        <!-- 充值金额 -->
-        <el-form-item 
-          label="充值金额（元）" 
-          prop="amount"
-          :rules="amountRules"
-        >
-          <el-input-number
-            v-model="rechargeForm.amount"
-            :min="0"
-            :precision="2"
-            :step="100"
-            placeholder="请输入充值金额"
-            style="width: 100%;"
-          />
-          <div style="margin-top: 8px; color: #909399; font-size: 12px;">
-            充值金额必须大于0
-          </div>
-        </el-form-item>
+          </el-form-item>
+        </div>
 
         <!-- 备注 -->
         <el-form-item label="备注" prop="note">
@@ -224,7 +222,7 @@ function submitForm() {
     
     const data = {
       user_id: rechargeForm.user_id,
-      amount: Math.round((rechargeForm.amount || 0) * 100), // 转换为分
+      amount: Number((rechargeForm.amount || 0).toFixed(2)), // 单位：元，原样传递
       operator: operatorName,
       operator_id: operatorId,
       note: rechargeForm.note || '',

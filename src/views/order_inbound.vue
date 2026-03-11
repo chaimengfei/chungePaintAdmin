@@ -187,14 +187,14 @@ function onProductChange(item, productId) {
         item.product_name = product.name
         item.unit = product.unit || '个'
         item.specification = product.specification || ''
-        // 保存默认进价，但不直接填入输入框，仅用于置灰提示
-        item.default_cost = product.product_cost || 0
+        // 价格提示：退货用 seller_price，入库用 cost（进价）
+        item.default_cost = batchForm.operate_type === 'return'
+          ? (Number(product.seller_price) || 0)
+          : (Number(product.cost) || 0)
         item.cost_per_unit = 0
         item.price_use_default = !!item.default_cost
-        // 清空金额字段，等待用户确认或修改进价后自动计算
         item.goods_total_amount = 0
         calculateCosts(item)
-        console.log('商品信息已填充:', { name: product.name, unit: product.unit, specification: product.specification, product_cost: product.product_cost })
       }
     }).catch(() => {
       ElMessage.error('获取商品信息失败')
@@ -383,7 +383,7 @@ function submitBatchForm() {
       message: isReturn ? '退货入库成功' : '入库成功',
       duration: 5000
     })
-    router.push('/stock/inbound')
+    router.push('/stock/outbound/list')
   }).catch(() => {
     ElMessage.error(isReturn ? '退货入库失败' : '入库失败')
   })

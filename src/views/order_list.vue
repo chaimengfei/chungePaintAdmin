@@ -95,9 +95,9 @@
         @selection-change="handleSelectionChange"
       >
         <el-table-column type="selection" width="55" />
-        <el-table-column prop="order_no" label="单号" width="160" />
-        <el-table-column prop="user_admin_name" label="客户" width="100" />
-        <el-table-column prop="operator_name" label="操作人" width="80" />
+        <el-table-column prop="order_no" label="单号" width="155" />
+        <el-table-column prop="user_admin_name" label="客户" width="80" />
+        <el-table-column prop="operator_name" label="操作人" width="70" />
         <el-table-column label="操作类型" width="100">
           <template #default="scope">
             <el-tag
@@ -108,24 +108,24 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="total_quantity" label="总数量" width="70">
+        <el-table-column prop="total_quantity" label="总数量" width="68">
           <template #default="scope">
             <span style="color: #67c23a;">{{ scope.row.total_quantity || 0 }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="total_amount" label="总金额" width="100">
+        <el-table-column prop="total_amount" label="总金额" width="80">
           <template #default="scope">
-            ¥{{ scope.row.total_amount?.toFixed(2) || '0.00' }}
+            ¥{{ formatAmountFlexible(scope.row.total_amount) }}
           </template>
         </el-table-column>
         <el-table-column prop="total_profit" label="总利润" width="80">
           <template #default="scope">
             <span :style="{ color: scope.row.total_profit >= 0 ? '#67c23a' : '#f56c6c' }">
-              ¥{{ scope.row.total_profit?.toFixed(2) || '0.00' }}
+              ¥{{ formatAmountFlexible(scope.row.total_profit) }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column prop="payment_status" label="支付状态" width="110">
+        <el-table-column prop="payment_status" label="支付状态" width="130">
           <template #default="scope">
             <div v-if="scope.row.payment_status === 3" style="display: flex; align-items: center; gap: 4px;">
               <el-tag type="success">支付成功</el-tag>
@@ -141,8 +141,8 @@
             <div v-else-if="scope.row.payment_status === 2" style="display: flex; align-items: center; gap: 8px;">
               <el-tag type="info">支付中</el-tag>
             </div>
-            <div v-else style="display: flex; align-items: center; gap: 8px;">
-              <el-tag type="warning">未支付</el-tag>
+            <div v-else style="display: flex; align-items: center; gap: 2px;">
+              <el-tag type="warning" style="margin-right: 0;">未支付</el-tag>
               <el-button 
                 type="primary" 
                 size="small" 
@@ -154,7 +154,7 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="created_at" label="时间" width="170">
+        <el-table-column prop="created_at" label="时间" width="165">
           <template #default="scope">
             {{ formatDateTime(scope.row.created_at) }}
           </template>
@@ -168,8 +168,8 @@
                   <span>数量:{{ item.quantity }} &nbsp;&nbsp; <span style="color: #909399;">库存:{{ item.before_stock }}→{{ item.after_stock }}</span></span>
                 </div>
                 <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
-                  <span>单价:{{ item.unit_price?.toFixed(2) || '0.00' }} &nbsp;&nbsp; <span style="font-weight: 500; color: #409eff;">小计:{{ item.total_price?.toFixed(2) || '0.00' }}</span></span>
-                  <span style="color: #67c23a;">利润:{{ item.profit?.toFixed(2) || '0.00' }}</span>
+                  <span>单价:{{ formatAmountFlexible(item.unit_price) }} &nbsp;&nbsp; <span style="font-weight: 500; color: #409eff;">小计:{{ formatAmountFlexible(item.total_price) }}</span></span>
+                  <span style="color: #67c23a;">利润:{{ formatAmountFlexible(item.profit) }}</span>
                 </div>
                 <div v-if="index < scope.row.items.length - 1" style="border-top: 1px solid #e4e7ed; margin-top: 8px; padding-top: 8px;"></div>
               </div>
@@ -259,7 +259,7 @@ const exportLoading = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
-const orderType = ref(1) // 0-全部,1-出库,2-入库,3-退货，默认出库
+const orderType = ref(0) // 0-全部,1-出库,2-入库,3-退货，默认全部
 const selectedRows = ref([]) // 选中的行
 const batchSettingPayment = ref(false) // 批量设置支付加载状态
 const tableRef = ref(null) // 表格实例引用
@@ -287,6 +287,14 @@ const invoiceLoading = ref(false)
 const dateRange = ref([])
 const startTime = ref('')
 const endTime = ref('')
+
+// 金额显示：整数不带小数，小数最多两位
+function formatAmountFlexible(value) {
+  if (value == null || value === '') return '0'
+  const num = Number(value)
+  if (Number.isNaN(num)) return String(value)
+  return Number(num.toFixed(2)).toString()
+}
 
 // 初始化默认时间范围（最近 1 个月）
 function initDefaultDateRange() {
@@ -388,7 +396,7 @@ function handleReset() {
   startTime.value = ''
   endTime.value = ''
   currentPage.value = 1
-  orderType.value = 1 // 重置为出库
+  orderType.value = 0 // 重置为全部
   loadOutboundList()
 }
 
@@ -492,9 +500,10 @@ function formatDateTime(dateTimeStr) {
 // 获取支付类型文本
 function getPaymentTypeText(paymentType) {
   const typeMap = {
-    1: '微信支付',
+    1: '线下转账',
     2: '余额支付',
-    3: '线下转账'
+    3: '微信支付',
+    4: '组合支付（余额+线下/微信）'
   }
   return typeMap[paymentType] || '未知支付方式'
 }
@@ -772,8 +781,8 @@ function viewDetail(row) {
         <div><strong>操作人：</strong>${row.operator_name || row.operator || '无'}</div>
         <div><strong>出库时间：</strong>${formatDateTime(row.created_at)}</div>
         <div><strong>总数量：</strong><span style="color: #67c23a;">${row.total_quantity || 0}</span></div>
-        <div><strong>总金额：</strong>¥${row.total_amount?.toFixed(2) || '0.00'}</div>
-        <div><strong>总利润：</strong><span style="color: ${row.total_profit >= 0 ? '#67c23a' : '#f56c6c'}">¥${row.total_profit?.toFixed(2) || '0.00'}</span></div>
+        <div><strong>总金额：</strong>¥${formatAmountFlexible(row.total_amount)}</div>
+        <div><strong>总利润：</strong><span style="color: ${row.total_profit >= 0 ? '#67c23a' : '#f56c6c'}">¥${formatAmountFlexible(row.total_profit)}</span></div>
         <div><strong>支付状态：</strong>${getPaymentStatusText(row.payment_status)}${row.payment_status === 3 && row.payment_type ? ` (${getPaymentTypeText(row.payment_type)})` : ''}</div>
         <div><strong>操作类型：</strong>${getOperationType(row).text}</div>
       </div>
@@ -797,9 +806,9 @@ function viewDetail(row) {
                 <td style="padding: 8px; border: 1px solid #e4e7ed;">${item.product_name}</td>
                 <td style="padding: 8px; border: 1px solid #e4e7ed;">${item.specification || '无'}</td>
                 <td style="padding: 8px; border: 1px solid #e4e7ed; text-align: center;">${item.quantity}</td>
-                <td style="padding: 8px; border: 1px solid #e4e7ed; text-align: right;">¥${item.unit_price?.toFixed(2) || '0.00'}</td>
-                <td style="padding: 8px; border: 1px solid #e4e7ed; text-align: right;">¥${item.total_price?.toFixed(2) || '0.00'}</td>
-                <td style="padding: 8px; border: 1px solid #e4e7ed; text-align: right; color: ${item.profit >= 0 ? '#67c23a' : '#f56c6c'}">¥${item.profit?.toFixed(2) || '0.00'}</td>
+                <td style="padding: 8px; border: 1px solid #e4e7ed; text-align: right;">¥${formatAmountFlexible(item.unit_price)}</td>
+                <td style="padding: 8px; border: 1px solid #e4e7ed; text-align: right;">¥${formatAmountFlexible(item.total_price)}</td>
+                <td style="padding: 8px; border: 1px solid #e4e7ed; text-align: right; color: ${item.profit >= 0 ? '#67c23a' : '#f56c6c'}">¥${formatAmountFlexible(item.profit)}</td>
               </tr>
             `).join('') || '<tr><td colspan="6" style="padding: 20px; text-align: center; color: #909399;">暂无商品明细</td></tr>'}
           </tbody>
@@ -830,7 +839,7 @@ function handleCurrentChange(val) {
 onMounted(() => {
   loadUserInfo()
   initDefaultDateRange() // 初始化默认时间范围
-  orderType.value = 1 // 默认出库
+  orderType.value = 0 // 默认全部
   loadOutboundList()
   
   // 监听全局店铺切换事件

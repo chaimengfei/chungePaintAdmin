@@ -28,30 +28,33 @@
           />
         </div>
 
-        <!-- 收支类型 -->
+        <!-- 收支类型：0-全部 1-收入 2-支出 -->
         <div style="display: flex; align-items: center; gap: 8px;">
           <span style="color: #606266; white-space: nowrap;">收支类型：</span>
           <el-select
             v-model="transactionType"
-            placeholder="全部"
             style="width: 120px;"
-            clearable
           >
+            <el-option label="全部" :value="0" />
             <el-option label="收入" :value="1" />
             <el-option label="支出" :value="2" />
           </el-select>
         </div>
 
-        <!-- 业务类型 -->
+        <!-- 业务类型：0-全部 1小程序 2出库 3入库 4退货 5充值入账 6其他开支 -->
         <div style="display: flex; align-items: center; gap: 8px;">
           <span style="color: #606266; white-space: nowrap;">业务类型：</span>
           <el-select
             v-model="businessType"
-            placeholder="全部"
-            style="width: 120px;"
-            clearable
+            style="width: 160px;"
           >
-            <el-option v-for="n in 6" :key="n" :label="`类型${n}`" :value="n" />
+            <el-option label="全部" :value="0" />
+            <el-option label="小程序" :value="1" />
+            <el-option label="出库" :value="2" />
+            <el-option label="入库" :value="3" />
+            <el-option label="退货" :value="4" />
+            <el-option label="充值入账" :value="5" />
+            <el-option label="其他开支" :value="6" />
           </el-select>
         </div>
 
@@ -89,9 +92,11 @@
 
     <el-card>
       <el-table :data="financeList" style="width: 100%" v-loading="loading" border>
-        <el-table-column prop="id" label="ID" width="80" />
+        <el-table-column prop="id" label="ID" width="60" />
         <el-table-column prop="transaction_no" label="流水号" width="160" />
-        <el-table-column prop="order_no" label="订单号" width="140" />
+        <el-table-column prop="order_no" label="订单号" width="150" />
+        <el-table-column prop="user_name" label="用户" width="80" />
+        <el-table-column prop="operator_name" label="操作人" width="70" />
         <el-table-column label="收支类型" width="90">
           <template #default="scope">
             <el-tag :type="scope.row.transaction_type === 1 ? 'success' : 'danger'">
@@ -99,18 +104,19 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="business_type" label="业务类型" width="90" />
-        <el-table-column prop="sub_business_type" label="子业务类型" width="100" />
+        <el-table-column label="业务类型" width="100">
+          <template #default="scope">
+            {{ getBusinessTypeLabel(scope.row.business_type) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="amount" label="金额" width="110">
           <template #default="scope">
             <span :style="{ color: scope.row.transaction_type === 1 ? '#67c23a' : '#f56c6c' }">
-              {{ scope.row.transaction_type === 1 ? '+' : '-' }}¥{{ formatAmount(scope.row.amount) }}
+              {{ scope.row.transaction_type === 1 ? '+' : '-' }}¥{{ formatAmountFlexible(scope.row.amount) }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column prop="user_name" label="用户" width="100" />
-        <el-table-column prop="operator_name" label="操作人" width="90" />
-        <el-table-column prop="remark" label="备注" min-width="120" show-overflow-tooltip />
+        <el-table-column prop="remark" label="备注" min-width="100" />
         <el-table-column prop="created_at" label="时间" width="170">
           <template #default="scope">
             {{ formatDateTime(scope.row.created_at) }}
@@ -144,9 +150,33 @@ const exportLoading = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
-const transactionType = ref(null) // 1-收入 2-支出
-const businessType = ref(null)   // 1-6
+const transactionType = ref(0) // 0-全部 1-收入 2-支出，默认全部
+const businessType = ref(0)   // 0-全部 1-6 见 businessTypeLabels，默认全部
+const businessTypeLabels = {
+  1: '小程序',
+  2: '出库',
+  3: '入库',
+  4: '退货',
+  5: '充值入账',
+  6: '其他开支',
+}
+function getBusinessTypeLabel(code) {
+  if (code == null || code === '') return '-'
+  return businessTypeLabels[code] ?? String(code)
+}
 const dateRange = ref([])
+
+// 初始化默认时间范围（最近 1 个月）
+function initDefaultDateRange() {
+  const now = new Date()
+  const oneMonthAgo = new Date()
+  oneMonthAgo.setMonth(now.getMonth() - 1)
+
+  const startDate = oneMonthAgo.toISOString().slice(0, 19).replace('T', ' ')
+  const endDate = now.toISOString().slice(0, 19).replace('T', ' ')
+
+  dateRange.value = [startDate, endDate]
+}
 
 // 用户权限
 const isRoot = ref(false)
@@ -204,10 +234,12 @@ function buildParams(forExport = false) {
   if (isRoot.value && selectedShopId.value) {
     params.shop_id = selectedShopId.value
   }
-  if (transactionType.value != null && transactionType.value !== '') {
+  // 全部(0) 不传；收入传 1，支出传 2
+  if (transactionType.value === 1 || transactionType.value === 2) {
     params.transaction_type = transactionType.value
   }
-  if (businessType.value != null && businessType.value !== '') {
+  // 全部(0) 不传；1-6 传对应业务类型
+  if (businessType.value >= 1 && businessType.value <= 6) {
     params.business_type = businessType.value
   }
   if (dateRange.value && dateRange.value.length === 2) {
@@ -223,9 +255,9 @@ function handleSearch() {
 }
 
 function handleReset() {
-  dateRange.value = []
-  transactionType.value = null
-  businessType.value = null
+  initDefaultDateRange()
+  transactionType.value = 0
+  businessType.value = 0
   currentPage.value = 1
   loadList()
 }
@@ -279,21 +311,39 @@ function handleCurrentChange() {
   loadList()
 }
 
-function formatAmount(val) {
-  if (val == null || val === '') return '0.00'
+// 金额：整数不展示小数点，有小数最多保留 2 位
+function formatAmountFlexible(val) {
+  if (val == null || val === '') return '0'
   const n = Number(val)
-  return isNaN(n) ? '0.00' : n.toFixed(2)
+  if (Number.isNaN(n)) return String(val)
+  return Number(n.toFixed(2)).toString()
 }
 
 function formatDateTime(val) {
-  if (!val) return '-'
-  const s = String(val)
+  if (val == null || val === '') return '-'
+  const s = String(val).trim()
+  const num = Number(val)
+  // Unix 时间戳：10 位为秒，13 位为毫秒
+  if (!Number.isNaN(num) && (s.length === 10 || s.length === 13)) {
+    const ms = s.length === 10 ? num * 1000 : num
+    const d = new Date(ms)
+    if (!Number.isNaN(d.getTime())) {
+      const Y = d.getFullYear()
+      const M = String(d.getMonth() + 1).padStart(2, '0')
+      const D = String(d.getDate()).padStart(2, '0')
+      const h = String(d.getHours()).padStart(2, '0')
+      const m = String(d.getMinutes()).padStart(2, '0')
+      const sec = String(d.getSeconds()).padStart(2, '0')
+      return `${Y}-${M}-${D} ${h}:${m}:${sec}`
+    }
+  }
   if (s.length >= 19) return s.slice(0, 19).replace('T', ' ')
   return s
 }
 
 onMounted(() => {
   loadUserInfo()
+  initDefaultDateRange()
   loadList()
 })
 </script>

@@ -58,18 +58,18 @@
           </el-select>
         </div>
 
-        <!-- 时间范围 -->
+        <!-- 时间范围：仅展示年月日，传参为 start/end 的 int64 时间戳 -->
         <div style="display: flex; align-items: center; gap: 8px;">
           <span style="color: #606266; white-space: nowrap;">时间：</span>
           <el-date-picker
             v-model="dateRange"
-            type="datetimerange"
+            type="daterange"
             range-separator="至"
-            start-placeholder="开始时间"
-            end-placeholder="结束时间"
-            format="YYYY-MM-DD HH:mm:ss"
-            value-format="YYYY-MM-DD HH:mm:ss"
-            style="width: 360px;"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            format="YYYY-MM-DD"
+            value-format="YYYY-MM-DD"
+            style="width: 280px;"
             clearable
           />
         </div>
@@ -143,6 +143,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import request from '../api/request'
+import { dateRangeToQueryTimestamps } from '../utils/datetime'
 
 const financeList = ref([])
 const loading = ref(false)
@@ -166,15 +167,13 @@ function getBusinessTypeLabel(code) {
 }
 const dateRange = ref([])
 
-// 初始化默认时间范围（最近 1 个月）
+// 初始化默认时间范围（最近 1 个月，仅日期）
 function initDefaultDateRange() {
   const now = new Date()
   const oneMonthAgo = new Date()
   oneMonthAgo.setMonth(now.getMonth() - 1)
-
-  const startDate = oneMonthAgo.toISOString().slice(0, 19).replace('T', ' ')
-  const endDate = now.toISOString().slice(0, 19).replace('T', ' ')
-
+  const startDate = oneMonthAgo.toISOString().slice(0, 10)
+  const endDate = now.toISOString().slice(0, 10)
   dateRange.value = [startDate, endDate]
 }
 
@@ -242,9 +241,10 @@ function buildParams(forExport = false) {
   if (businessType.value >= 1 && businessType.value <= 6) {
     params.business_type = businessType.value
   }
-  if (dateRange.value && dateRange.value.length === 2) {
-    params.start_time = dateRange.value[0]
-    params.end_time = dateRange.value[1]
+  if (dateRange.value?.length === 2) {
+    const ts = dateRangeToQueryTimestamps(dateRange.value[0], dateRange.value[1])
+    if (ts.start_time != null) params.start_time = ts.start_time
+    if (ts.end_time != null) params.end_time = ts.end_time
   }
   return params
 }

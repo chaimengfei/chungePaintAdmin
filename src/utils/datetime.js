@@ -31,3 +31,15 @@ export function buildOperateTimestamp(input) {
   return Math.floor(target.getTime() / 1000)
 }
 
+// 筛选时间范围 → 传给后端的 start_time / end_time（int64 秒级时间戳）
+// 1处：开始日期 → 当日 00:00:00（东八区）对应时间戳
+// 2处：结束日期 → 当日 23:59:59（东八区）对应时间戳
+// 用于 admin/order/operations、admin/finance/list 及各自导出接口
+export function dateRangeToQueryTimestamps(startValue, endValue) {
+  const startDate = getDateOnly(startValue)
+  const endDate = getDateOnly(endValue)
+  if (!startDate || !endDate) return {}
+  const startTime = Math.floor(new Date(`${startDate}T00:00:00+08:00`).getTime() / 1000)
+  const endTime = Math.floor(new Date(`${endDate}T23:59:59+08:00`).getTime() / 1000)
+  return { start_time: startTime, end_time: endTime }
+}

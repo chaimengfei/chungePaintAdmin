@@ -43,19 +43,18 @@
           </el-select>
         </div>
         
-        <!-- 时间范围筛选 -->
+        <!-- 时间范围筛选：仅展示年月日，传参为 start/end 的 int64 时间戳 -->
         <div style="display: flex; align-items: center; gap: 8px;">
           <span style="color: #606266; white-space: nowrap;">时间：</span>
           <el-date-picker
             v-model="dateRange"
-            type="datetimerange"
+            type="daterange"
             range-separator="至"
-            start-placeholder="开始时间"
-            end-placeholder="结束时间"
-            format="YYYY-MM-DD HH:mm:ss"
-            value-format="YYYY-MM-DD HH:mm:ss"
-            style="width: 360px;"
-            @change="handleDateRangeChange"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            format="YYYY-MM-DD"
+            value-format="YYYY-MM-DD"
+            style="width: 280px;"
             clearable
           />
         </div>
@@ -252,6 +251,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { QuestionFilled } from '@element-plus/icons-vue'
 import request from '../api/request'
+import { dateRangeToQueryTimestamps } from '../utils/datetime'
 
 const outboundList = ref([])
 const loading = ref(false)
@@ -283,10 +283,8 @@ const currentInvoiceUrl = ref('')
 const invoiceHtmlContent = ref('')
 const invoiceLoading = ref(false)
 
-// 时间范围筛选
+// 时间范围筛选（仅存年月日 YYYY-MM-DD，传接口时转为 00:00:00 / 23:59:59 时间戳）
 const dateRange = ref([])
-const startTime = ref('')
-const endTime = ref('')
 
 // 金额显示：整数不带小数，小数最多两位
 function formatAmountFlexible(value) {
@@ -296,18 +294,13 @@ function formatAmountFlexible(value) {
   return Number(num.toFixed(2)).toString()
 }
 
-// 初始化默认时间范围（最近 1 个月）
+// 初始化默认时间范围（最近 1 个月，仅日期）
 function initDefaultDateRange() {
   const now = new Date()
   const oneMonthAgo = new Date()
   oneMonthAgo.setMonth(now.getMonth() - 1)
-  
-  // 设置默认时间范围
-  const startDate = oneMonthAgo.toISOString().slice(0, 19).replace('T', ' ')
-  const endDate = now.toISOString().slice(0, 19).replace('T', ' ')
-  
-  startTime.value = startDate
-  endTime.value = endDate
+  const startDate = oneMonthAgo.toISOString().slice(0, 10)
+  const endDate = now.toISOString().slice(0, 10)
   dateRange.value = [startDate, endDate]
 }
 
@@ -367,17 +360,6 @@ function handleShopChange(shopId) {
   loadOutboundList()
 }
 
-// 处理时间范围变化
-function handleDateRangeChange(value) {
-  if (value && value.length === 2) {
-    startTime.value = value[0]
-    endTime.value = value[1]
-  } else {
-    startTime.value = ''
-    endTime.value = ''
-  }
-}
-
 // 订单类型变化
 function handleOrderTypeChange() {
   currentPage.value = 1
@@ -393,22 +375,21 @@ function handleSearch() {
 // 重置按钮处理
 function handleReset() {
   dateRange.value = []
-  startTime.value = ''
-  endTime.value = ''
   currentPage.value = 1
   orderType.value = 0 // 重置为全部
   loadOutboundList()
 }
 
-// 导出：参数与列表接口一致，仅去掉 page、page_size；接口返回 JSON 含 data.url，再打开该 URL 下载真实 Excel
+// 导出：参数与列表接口一致，仅去掉 page、page_size；start/end 传 int64 时间戳
 function handleExport() {
   const params = {}
   params.types = orderType.value
   if (isRoot.value && selectedShopId.value) {
     params.shop_id = selectedShopId.value
   }
-  if (startTime.value) params.start_time = startTime.value
-  if (endTime.value) params.end_time = endTime.value
+  const ts = dateRange.value?.length === 2 ? dateRangeToQueryTimestamps(dateRange.value[0], dateRange.value[1]) : {}
+  if (ts.start_time != null) params.start_time = ts.start_time
+  if (ts.end_time != null) params.end_time = ts.end_time
 
   exportLoading.value = true
   request.get('/order/operations/export', { params })
@@ -447,14 +428,13 @@ function loadOutboundList() {
   }
   // 普通管理员不需要传shop_id，后端会根据token自动识别
   
-  // 添加时间范围参数
-  if (startTime.value) {
-    params.start_time = startTime.value
+  // 时间范围：转为 int64 时间戳（开始日 00:00:00，结束日 23:59:59）
+  if (dateRange.value?.length === 2) {
+    const ts = dateRangeToQueryTimestamps(dateRange.value[0], dateRange.value[1])
+    if (ts.start_time != null) params.start_time = ts.start_time
+    if (ts.end_time != null) params.end_time = ts.end_time
   }
-  if (endTime.value) {
-    params.end_time = endTime.value
-  }
-  
+
   request.get('/order/operations', { params }).then(res => {
     if (res.code === 0) {
       outboundList.value = res.data.list || []

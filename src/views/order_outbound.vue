@@ -23,7 +23,7 @@ const batchForm = reactive({
     remark: ''
   }],
   customer: null,
-  operate_time: new Date().toLocaleString('sv-SE').slice(0, 19), // 默认当前本地日期时间
+  operate_time: new Date().toLocaleString('sv-SE').slice(0, 19), // 内部存时分秒，页面只展示年月日
   remark: '',
   shop_id: null  // 店铺ID
 })
@@ -44,6 +44,32 @@ const isDraft = ref(false)
 const hasDraft = ref(false) // 是否有草稿存在
 const showDraftAlert = ref(false) // 是否显示草稿提示
 const operatorInfo = ref(null) // 当前操作员信息
+
+// 出库时间：内部与草稿均为带时分秒；仅调用 batch/outbound 时传带时分秒的 ISO
+function getDateOnly(str) {
+  const s = String(str || '').trim()
+  if (s.length >= 10) return s.slice(0, 10)
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+function operateTimeToIso(str) {
+  const s = String(str || '').trim()
+  if (s.length >= 19) return s.slice(0, 19).replace(' ', 'T') + '+08:00'
+  if (s.length >= 10) return s.slice(0, 10) + 'T00:00:00+08:00'
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}T00:00:00+08:00`
+}
+function draftOperateTimeToLocal(str) {
+  if (!str) return new Date().toLocaleString('sv-SE').slice(0, 19)
+  const s = String(str).trim()
+  if (s.includes('T')) return s.slice(0, 19).replace('T', ' ')
+  if (s.length >= 19) return s.slice(0, 19)
+  if (s.length >= 10) return s.slice(0, 10) + ' 00:00:00'
+  return new Date().toLocaleString('sv-SE').slice(0, 19)
+}
 
 function loadGoodsOptions() {
   getProductList({ page: 1, page_size: 100 }).then(res => {
@@ -315,7 +341,7 @@ function loadDraft() {
     
     // 加载草稿数据到表单
     batchForm.customer = draft.user_name || null
-    batchForm.operate_time = draft.operate_time ? draft.operate_time.replace('T', ' ').slice(0, 19) : new Date().toLocaleString('sv-SE').slice(0, 19)
+    batchForm.operate_time = draftOperateTimeToLocal(draft.operate_time)
     batchForm.remark = draft.remark || ''
     batchForm.shop_id = draft.shop_id
     
@@ -362,7 +388,7 @@ function saveDraft() {
     total_amount: totalAmount.value,
     user_name: batchForm.customer,
     user_id: selectedCustomer ? selectedCustomer.user_id : null,
-    operate_time: batchForm.operate_time.replace(' ', 'T') + '+08:00',
+    operate_time: operateTimeToIso(batchForm.operate_time),
     operator: operatorInfo.value ? (operatorInfo.value.real_name || operatorInfo.value.name || '未知用户') : '未知用户',
     operator_id: operatorInfo.value ? (operatorInfo.value.id || 0) : 0,
     remark: batchForm.remark,
@@ -458,7 +484,7 @@ function submitBatchForm() {
     total_amount: totalAmount.value,
     user_name: batchForm.customer,
     user_id: selectedCustomer ? selectedCustomer.user_id : null,
-    operate_time: batchForm.operate_time.replace(' ', 'T') + '+08:00', // 保持本地时间，添加时区信息
+    operate_time: operateTimeToIso(batchForm.operate_time), // 仅此接口传带时分秒
     operator: operatorInfo.value ? (operatorInfo.value.real_name || operatorInfo.value.name || '未知用户') : '未知用户',
     operator_id: operatorInfo.value ? (operatorInfo.value.id || 0) : 0,
     remark: batchForm.remark,
@@ -634,12 +660,13 @@ onMounted(() => {
             <div style="flex: 1; display: flex; align-items: center; gap: 12px;">
               <label style="font-size: 14px; color: #606266; white-space: nowrap;">出库时间</label>
               <el-date-picker
-                v-model="batchForm.operate_time"
-                type="datetime"
-                placeholder="选择出库日期时间"
+                :model-value="getDateOnly(batchForm.operate_time)"
+                @update:model-value="(v) => { batchForm.operate_time = (v || getDateOnly(batchForm.operate_time)) + ' ' + (batchForm.operate_time.slice(11, 19) || '00:00:00') }"
+                type="date"
+                placeholder="选择出库日期"
                 style="flex: 1;"
-                format="YYYY-MM-DD HH:mm:ss"
-                value-format="YYYY-MM-DD HH:mm:ss"
+                format="YYYY-MM-DD"
+                value-format="YYYY-MM-DD"
               />
             </div>
           </div>

@@ -5,7 +5,7 @@ import { ElMessage } from 'element-plus'
 import { QuestionFilled } from '@element-plus/icons-vue'
 import request from '../api/request'
 import { batchInboundStock, getProductList, getSupplierList } from '../api/order'
-import { getDateOnly, buildOperateTimeIso } from '../utils/datetime'
+import { getDateOnly, buildOperateTimestamp } from '../utils/datetime'
 
 const router = useRouter()
 
@@ -364,7 +364,7 @@ function submitBatchForm() {
     operator_id: operatorInfo.id || 0,
     remark: batchForm.remark || '',
     shop_id: batchForm.shop_id,
-    operate_time: buildOperateTimeIso(batchForm.operate_time),
+    operate_time: buildOperateTimestamp(batchForm.operate_time),
     is_return: isReturn
   }
   

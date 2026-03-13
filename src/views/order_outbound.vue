@@ -5,7 +5,7 @@ import { ElMessage } from 'element-plus'
 import { QuestionFilled } from '@element-plus/icons-vue'
 import request from '../api/request'
 import { batchOutboundStock, getProductList, DraftManager } from '../api/order'
-import { getDateOnly, buildOperateTimeIso } from '../utils/datetime'
+import { getDateOnly, buildOperateTimestamp } from '../utils/datetime'
 
 const router = useRouter()
 
@@ -371,7 +371,7 @@ function saveDraft() {
     total_amount: totalAmount.value,
     user_name: batchForm.customer,
     user_id: selectedCustomer ? selectedCustomer.user_id : null,
-    operate_time: buildOperateTimeIso(batchForm.operate_time),
+    operate_time: buildOperateTimestamp(batchForm.operate_time),
     operator: operatorInfo.value ? (operatorInfo.value.real_name || operatorInfo.value.name || '未知用户') : '未知用户',
     operator_id: operatorInfo.value ? (operatorInfo.value.id || 0) : 0,
     remark: batchForm.remark,
@@ -467,7 +467,7 @@ function submitBatchForm() {
     total_amount: totalAmount.value,
     user_name: batchForm.customer,
     user_id: selectedCustomer ? selectedCustomer.user_id : null,
-    operate_time: buildOperateTimeIso(batchForm.operate_time), // 仅此接口传带时分秒
+    operate_time: buildOperateTimestamp(batchForm.operate_time), // 仅此接口传时间戳
     operator: operatorInfo.value ? (operatorInfo.value.real_name || operatorInfo.value.name || '未知用户') : '未知用户',
     operator_id: operatorInfo.value ? (operatorInfo.value.id || 0) : 0,
     remark: batchForm.remark,

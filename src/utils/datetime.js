@@ -11,21 +11,23 @@ export function getDateOnly(input) {
   return `${y}-${m}-${day}`
 }
 
-// 出入库操作时间：根据日期构造带时分秒的 ISO 字符串
+// 出入库操作时间：根据日期构造 Unix 时间戳（秒，int64）
 // - 如果选的是“今天”：使用当前时分秒
-// - 如果是其它日期：时分秒固定为 20:00:00
-export function buildOperateTimeIso(input) {
+// - 如果是其它日期：时分秒固定为 20:00:00（东八区）
+export function buildOperateTimestamp(input) {
   const now = new Date()
   const today = getDateOnly(now.toISOString())
   const datePart = getDateOnly(input || today)
 
+  let target
   if (datePart === today) {
-    const h = String(now.getHours()).padStart(2, '0')
-    const m = String(now.getMinutes()).padStart(2, '0')
-    const s = String(now.getSeconds()).padStart(2, '0')
-    return `${datePart}T${h}:${m}:${s}+08:00`
+    // 今天：当前时分秒
+    target = now
+  } else {
+    // 其他日期：20:00:00，固定东八区
+    target = new Date(`${datePart}T20:00:00+08:00`)
   }
 
-  return `${datePart}T20:00:00+08:00`
+  return Math.floor(target.getTime() / 1000)
 }
 

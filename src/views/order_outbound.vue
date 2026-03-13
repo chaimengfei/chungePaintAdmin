@@ -5,6 +5,7 @@ import { ElMessage } from 'element-plus'
 import { QuestionFilled } from '@element-plus/icons-vue'
 import request from '../api/request'
 import { batchOutboundStock, getProductList, DraftManager } from '../api/order'
+import { getDateOnly, buildOperateTimeIso } from '../utils/datetime'
 
 const router = useRouter()
 
@@ -44,24 +45,6 @@ const isDraft = ref(false)
 const hasDraft = ref(false) // 是否有草稿存在
 const showDraftAlert = ref(false) // 是否显示草稿提示
 const operatorInfo = ref(null) // 当前操作员信息
-
-// 出库时间：内部与草稿均为带时分秒；仅调用 batch/outbound 时传带时分秒的 ISO
-function getDateOnly(str) {
-  const s = String(str || '').trim()
-  if (s.length >= 10) return s.slice(0, 10)
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-function operateTimeToIso(str) {
-  const s = String(str || '').trim()
-  if (s.length >= 19) return s.slice(0, 19).replace(' ', 'T') + '+08:00'
-  if (s.length >= 10) return s.slice(0, 10) + 'T00:00:00+08:00'
-  const d = new Date()
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}T00:00:00+08:00`
-}
 function draftOperateTimeToLocal(str) {
   if (!str) return new Date().toLocaleString('sv-SE').slice(0, 19)
   const s = String(str).trim()
@@ -388,7 +371,7 @@ function saveDraft() {
     total_amount: totalAmount.value,
     user_name: batchForm.customer,
     user_id: selectedCustomer ? selectedCustomer.user_id : null,
-    operate_time: operateTimeToIso(batchForm.operate_time),
+    operate_time: buildOperateTimeIso(batchForm.operate_time),
     operator: operatorInfo.value ? (operatorInfo.value.real_name || operatorInfo.value.name || '未知用户') : '未知用户',
     operator_id: operatorInfo.value ? (operatorInfo.value.id || 0) : 0,
     remark: batchForm.remark,
@@ -484,7 +467,7 @@ function submitBatchForm() {
     total_amount: totalAmount.value,
     user_name: batchForm.customer,
     user_id: selectedCustomer ? selectedCustomer.user_id : null,
-    operate_time: operateTimeToIso(batchForm.operate_time), // 仅此接口传带时分秒
+    operate_time: buildOperateTimeIso(batchForm.operate_time), // 仅此接口传带时分秒
     operator: operatorInfo.value ? (operatorInfo.value.real_name || operatorInfo.value.name || '未知用户') : '未知用户',
     operator_id: operatorInfo.value ? (operatorInfo.value.id || 0) : 0,
     remark: batchForm.remark,

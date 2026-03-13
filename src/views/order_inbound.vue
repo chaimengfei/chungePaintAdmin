@@ -5,6 +5,7 @@ import { ElMessage } from 'element-plus'
 import { QuestionFilled } from '@element-plus/icons-vue'
 import request from '../api/request'
 import { batchInboundStock, getProductList, getSupplierList } from '../api/order'
+import { getDateOnly, buildOperateTimeIso } from '../utils/datetime'
 
 const router = useRouter()
 
@@ -363,6 +364,7 @@ function submitBatchForm() {
     operator_id: operatorInfo.id || 0,
     remark: batchForm.remark || '',
     shop_id: batchForm.shop_id,
+    operate_time: buildOperateTimeIso(batchForm.operate_time),
     is_return: isReturn
   }
   
@@ -550,14 +552,15 @@ onMounted(() => {
               </el-select>
             </div>
             <div style="flex: 1; display: flex; align-items: center; gap: 12px;">
-              <label style="font-size: 14px; color: #606266; white-space: nowrap; min-width: 80px;">入库时间</label>
+              <label style="font-size: 14px; color: #606266; white-space: nowrap; min-width: 80px;">退货时间</label>
               <el-date-picker
-                v-model="batchForm.operate_time"
-                type="datetime"
-                placeholder="选择入库日期时间"
+                :model-value="getDateOnly(batchForm.operate_time)"
+                @update:model-value="(v) => { batchForm.operate_time = (v || getDateOnly(batchForm.operate_time)) + ' ' + (batchForm.operate_time.slice(11, 19) || '00:00:00') }"
+                type="date"
+                placeholder="选择入库日期"
                 style="flex: 1;"
-                format="YYYY-MM-DD HH:mm:ss"
-                value-format="YYYY-MM-DD HH:mm:ss"
+                format="YYYY-MM-DD"
+                value-format="YYYY-MM-DD"
               />
             </div>
           </div>
@@ -579,12 +582,13 @@ onMounted(() => {
             <div style="flex: 1; display: flex; align-items: center; gap: 12px;">
               <label style="font-size: 14px; color: #606266; white-space: nowrap; min-width: 80px;">入库时间</label>
               <el-date-picker
-                v-model="batchForm.operate_time"
-                type="datetime"
-                placeholder="选择入库日期时间"
+                :model-value="getDateOnly(batchForm.operate_time)"
+                @update:model-value="(v) => { batchForm.operate_time = (v || getDateOnly(batchForm.operate_time)) + ' ' + (batchForm.operate_time.slice(11, 19) || '00:00:00') }"
+                type="date"
+                placeholder="选择入库日期"
                 style="flex: 1;"
-                format="YYYY-MM-DD HH:mm:ss"
-                value-format="YYYY-MM-DD HH:mm:ss"
+                format="YYYY-MM-DD"
+                value-format="YYYY-MM-DD"
               />
             </div>
           </div>

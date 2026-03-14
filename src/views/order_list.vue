@@ -42,6 +42,26 @@
             <el-option v-for="opt in orderTypeOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
           </el-select>
         </div>
+
+        <!-- 客户筛选：全部传 0 或不传，否则传 user_id -->
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="color: #606266; white-space: nowrap;">客户：</span>
+          <el-select
+            v-model="selectedCustomerId"
+            placeholder="全部"
+            style="width: 180px;"
+            filterable
+            @change="handleCustomerChange"
+          >
+            <el-option label="全部" :value="0" />
+            <el-option
+              v-for="c in customerOptions"
+              :key="c.user_id"
+              :label="`${c.label} (${c.mobile_phone || ''})`"
+              :value="c.user_id"
+            />
+          </el-select>
+        </div>
         
         <!-- 时间范围筛选：仅展示年月日，传参为 start/end 的 int64 时间戳 -->
         <div style="display: flex; align-items: center; gap: 8px;">
@@ -277,6 +297,10 @@ const shopList = ref([])
 const selectedShopId = ref(null)
 const operatorInfo = ref(null) // 当前操作员信息
 
+// 客户筛选：0-全部，>0 为 user_id
+const customerOptions = ref([])
+const selectedCustomerId = ref(0)
+
 // 单据预览相关
 const invoiceDialogVisible = ref(false)
 const currentInvoiceUrl = ref('')
@@ -353,10 +377,43 @@ function getCurrentShopName() {
   return '未知店铺'
 }
 
+// 加载客户列表（与出库单一致）
+function loadCustomerOptions() {
+  const shopId = isRoot.value ? selectedShopId.value : shopInfo.value?.id
+  if (!shopId) {
+    customerOptions.value = []
+    return
+  }
+  request.get('/user/list', {
+    params: { page: 1, page_size: 100, shop_id: shopId }
+  }).then(res => {
+    if (res.code === 0) {
+      const list = res.data?.list || []
+      customerOptions.value = list.map(item => ({
+        label: item.admin_display_name || item.name || '未知用户',
+        user_id: item.id,
+        mobile_phone: item.mobile_phone || ''
+      }))
+    } else {
+      customerOptions.value = []
+    }
+  }).catch(() => {
+    customerOptions.value = []
+  })
+}
+
 // 处理店铺切换
 function handleShopChange(shopId) {
   selectedShopId.value = shopId
-  currentPage.value = 1 // 重置到第一页
+  selectedCustomerId.value = 0
+  loadCustomerOptions()
+  currentPage.value = 1
+  loadOutboundList()
+}
+
+// 客户筛选变化
+function handleCustomerChange() {
+  currentPage.value = 1
   loadOutboundList()
 }
 
@@ -375,17 +432,23 @@ function handleSearch() {
 // 重置按钮处理
 function handleReset() {
   dateRange.value = []
+  selectedCustomerId.value = 0
   currentPage.value = 1
-  orderType.value = 0 // 重置为全部
+  orderType.value = 0
   loadOutboundList()
 }
 
-// 导出：参数与列表接口一致，仅去掉 page、page_size；start/end 传 int64 时间戳
+// 导出：参数与列表接口一致，仅去掉 page、page_size；start/end 传 int64 时间戳；user_id 选全部传 0
 function handleExport() {
   const params = {}
   params.types = orderType.value
   if (isRoot.value && selectedShopId.value) {
     params.shop_id = selectedShopId.value
+  }
+  if (selectedCustomerId.value > 0) {
+    params.user_id = selectedCustomerId.value
+  } else {
+    params.user_id = 0
   }
   const ts = dateRange.value?.length === 2 ? dateRangeToQueryTimestamps(dateRange.value[0], dateRange.value[1]) : {}
   if (ts.start_time != null) params.start_time = ts.start_time
@@ -428,6 +491,9 @@ function loadOutboundList() {
   }
   // 普通管理员不需要传shop_id，后端会根据token自动识别
   
+  // 客户：全部传 0，否则传 user_id
+  params.user_id = selectedCustomerId.value > 0 ? selectedCustomerId.value : 0
+
   // 时间范围：转为 int64 时间戳（开始日 00:00:00，结束日 23:59:59）
   if (dateRange.value?.length === 2) {
     const ts = dateRangeToQueryTimestamps(dateRange.value[0], dateRange.value[1])
@@ -818,10 +884,12 @@ function handleCurrentChange(val) {
 
 onMounted(() => {
   loadUserInfo()
-  initDefaultDateRange() // 初始化默认时间范围
-  orderType.value = 0 // 默认全部
+  initDefaultDateRange()
+  orderType.value = 0
+  selectedCustomerId.value = 0
+  loadCustomerOptions()
   loadOutboundList()
-  
+
   // 监听全局店铺切换事件
   window.addEventListener('shopChanged', (event) => {
     if (isRoot.value) {

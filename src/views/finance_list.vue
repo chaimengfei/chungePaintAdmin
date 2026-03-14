@@ -58,6 +58,26 @@
           </el-select>
         </div>
 
+        <!-- 客户筛选：全部传 0 或不传，否则传 user_id -->
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="color: #606266; white-space: nowrap;">客户：</span>
+          <el-select
+            v-model="selectedCustomerId"
+            placeholder="全部"
+            style="width: 180px;"
+            filterable
+            @change="handleCustomerChange"
+          >
+            <el-option label="全部" :value="0" />
+            <el-option
+              v-for="c in customerOptions"
+              :key="c.user_id"
+              :label="`${c.label} (${c.mobile_phone || ''})`"
+              :value="c.user_id"
+            />
+          </el-select>
+        </div>
+
         <!-- 时间范围：仅展示年月日，传参为 start/end 的 int64 时间戳 -->
         <div style="display: flex; align-items: center; gap: 8px;">
           <span style="color: #606266; white-space: nowrap;">时间：</span>
@@ -153,6 +173,8 @@ const pageSize = ref(20)
 const total = ref(0)
 const transactionType = ref(0) // 0-全部 1-收入 2-支出，默认全部
 const businessType = ref(0)   // 0-全部 1-6 见 businessTypeLabels，默认全部
+const customerOptions = ref([])
+const selectedCustomerId = ref(0)  // 0-全部，>0 为 user_id
 const businessTypeLabels = {
   1: '小程序',
   2: '出库',
@@ -220,6 +242,38 @@ function getCurrentShopName() {
 function handleShopChange(shopId) {
   selectedShopId.value = shopId
   if (isRoot.value) localStorage.setItem('selected_shop_id', String(shopId))
+  selectedCustomerId.value = 0
+  loadCustomerOptions()
+  currentPage.value = 1
+  loadList()
+}
+
+// 加载客户列表（与出库单一致）
+function loadCustomerOptions() {
+  const shopId = isRoot.value ? selectedShopId.value : shopInfo.value?.id
+  if (!shopId) {
+    customerOptions.value = []
+    return
+  }
+  request.get('/user/list', {
+    params: { page: 1, page_size: 100, shop_id: shopId }
+  }).then(res => {
+    if (res.code === 0) {
+      const list = res.data?.list || []
+      customerOptions.value = list.map(item => ({
+        label: item.admin_display_name || item.name || '未知用户',
+        user_id: item.id,
+        mobile_phone: item.mobile_phone || ''
+      }))
+    } else {
+      customerOptions.value = []
+    }
+  }).catch(() => {
+    customerOptions.value = []
+  })
+}
+
+function handleCustomerChange() {
   currentPage.value = 1
   loadList()
 }
@@ -241,6 +295,7 @@ function buildParams(forExport = false) {
   if (businessType.value >= 1 && businessType.value <= 6) {
     params.business_type = businessType.value
   }
+  params.user_id = selectedCustomerId.value > 0 ? selectedCustomerId.value : 0
   if (dateRange.value?.length === 2) {
     const ts = dateRangeToQueryTimestamps(dateRange.value[0], dateRange.value[1])
     if (ts.start_time != null) params.start_time = ts.start_time
@@ -258,6 +313,7 @@ function handleReset() {
   initDefaultDateRange()
   transactionType.value = 0
   businessType.value = 0
+  selectedCustomerId.value = 0
   currentPage.value = 1
   loadList()
 }
@@ -344,6 +400,8 @@ function formatDateTime(val) {
 onMounted(() => {
   loadUserInfo()
   initDefaultDateRange()
+  selectedCustomerId.value = 0
+  loadCustomerOptions()
   loadList()
 })
 </script>
